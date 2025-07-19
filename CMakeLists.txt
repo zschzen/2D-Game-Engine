@@ -39,6 +39,7 @@ include(cmake/external/lua.cmake)
 include(cmake/external/sdl.cmake)
 include(cmake/external/imgui.cmake)
 include(cmake/external/cglm.cmake)
+include(cmake/external/spdlog.cmake)
 
 # --------------------------------------------------------------------
 # Output Directories
