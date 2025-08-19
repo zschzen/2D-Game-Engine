@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5...4.0)
 project(2DEngine
         VERSION 0.0.1
         DESCRIPTION "A simple 2D game engine developed following Pikuma's course"
