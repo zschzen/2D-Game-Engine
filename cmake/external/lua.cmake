@@ -7,13 +7,13 @@ set(LUA_VERSION 5.4.8)
 # Platform-Specific Definitions
 # --------------------------------------------------------------------
 if(UNIX AND NOT APPLE)
-  set(LUA_PLATFORM_DEFINE LUA_USE_LINUX)
+    set(LUA_PLATFORM_DEFINE LUA_USE_LINUX)
 elseif(APPLE)
-  set(LUA_PLATFORM_DEFINE LUA_USE_MACOSX)
+    set(LUA_PLATFORM_DEFINE LUA_USE_MACOSX)
 elseif(WIN32)
-  set(LUA_PLATFORM_DEFINE LUA_USE_WINDOWS)
+    set(LUA_PLATFORM_DEFINE LUA_USE_WINDOWS)
 else()
-  set(LUA_PLATFORM_DEFINE LUA_ANSI)
+    set(LUA_PLATFORM_DEFINE LUA_ANSI)
 endif()
 
 # --------------------------------------------------------------------
@@ -30,7 +30,7 @@ CPMAddPackage(
 )
 
 if(NOT Lua_ADDED)
-  message(FATAL_ERROR "Failed to add Lua package")
+    message(FATAL_ERROR "Failed to add Lua package")
 endif()
 
 # --------------------------------------------------------------------
@@ -77,26 +77,26 @@ CPMAddPackage(
 )
 
 if(sol2_ADDED)
-  # --------------------------------------------------------------------
-  # Include & Library Directories
-  # --------------------------------------------------------------------
-  list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR
+    # --------------------------------------------------------------------
+    # Include & Library Directories
+    # --------------------------------------------------------------------
+    list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR
     ${Lua_SOURCE_DIR}
     ${sol2_SOURCE_DIR}/include/sol
   )
 
-  list(APPEND ENGINE_LIBRARIES
+    list(APPEND ENGINE_LIBRARIES
     sol2::sol2
     lua
   )
 
-  # --------------------------------------------------------------------
-  # Timing
-  # --------------------------------------------------------------------
-  string(TIMESTAMP AFTER_SOL2 "%s")
-  math(EXPR DELTA_SOL2 "${AFTER_SOL2} - ${BEFORE_SOL2}")
-  message(STATUS "sol2 time: ${DELTA_SOL2}s")
+    # --------------------------------------------------------------------
+    # Timing
+    # --------------------------------------------------------------------
+    string(TIMESTAMP AFTER_SOL2 "%s")
+    math(EXPR DELTA_SOL2 "${AFTER_SOL2} - ${BEFORE_SOL2}")
+    message(STATUS "sol2 time: ${DELTA_SOL2}s")
 else()
-  message(FATAL_ERROR "Failed to add sol2 package")
+    message(FATAL_ERROR "Failed to add sol2 package")
 endif()
 
