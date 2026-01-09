@@ -5,11 +5,6 @@ if(NOT DEFINED EMSCRIPTEN)
     # ----------------------------------------------------------------
     set(BUILD_SHARED_LIBS ON)
 
-    set(SDL2_DISABLE_INSTALL OFF CACHE BOOL "Enable SDL2 installation" FORCE)
-    set(SDL_SHARED ON CACHE BOOL "Build SDL2 as shared library" FORCE)
-    set(SDL_STATIC OFF CACHE BOOL "Disable SDL2 static library" FORCE)
-    set(SDL_WERROR OFF CACHE BOOL "Disable warnings as errors in SDL2" FORCE)
-
     # ----------------------------------------------------------------
     # CMake policy / language support
     # ----------------------------------------------------------------
@@ -23,22 +18,30 @@ if(NOT DEFINED EMSCRIPTEN)
     # SDL2
     # ----------------------------------------------------------------
     string(TIMESTAMP BEFORE_SDL2 "%s")
-    CPMAddPackage(
-        NAME SDL2
-        GITHUB_REPOSITORY libsdl-org/SDL
-        GIT_TAG release-2.32.8
-        OPTIONS
-            "SDL2_DISABLE_INSTALL OFF"
-            "SDL_SHARED ON"
-            "SDL_STATIC OFF"
-            "SDL_WERROR OFF"
-    )
 
-    if(NOT SDL2_ADDED)
-        message(FATAL_ERROR "Failed to fetch SDL2 from repository")
+    find_package(SDL2 QUIET CONFIG)
+
+    if(SDL2_FOUND)
+        message(STATUS "Using system SDL2")
+    else()
+        message(STATUS "SDL2 not found in system, fetching and compiling from repository...")
+        CPMAddPackage(
+            NAME SDL2
+            GITHUB_REPOSITORY libsdl-org/SDL
+            GIT_TAG release-2.32.10
+            OPTIONS
+                "SDL2_DISABLE_INSTALL OFF"
+                "SDL_SHARED ON"
+                "SDL_STATIC OFF"
+                "SDL_WERROR OFF"
+                "SDL_TEST_LIBRARY OFF"
+        )
+
+        if(NOT SDL2_ADDED)
+            message(FATAL_ERROR "Failed to fetch SDL2 from repository")
+        endif()
     endif()
 
-    find_package(SDL2 REQUIRED CONFIG)
     string(TIMESTAMP AFTER_SDL2 "%s")
     math(EXPR DELTA_SDL2 "${AFTER_SDL2} - ${BEFORE_SDL2}")
     message(STATUS "SDL2 TIME: ${DELTA_SDL2}s")
@@ -47,19 +50,26 @@ if(NOT DEFINED EMSCRIPTEN)
     # SDL2_image
     # ----------------------------------------------------------------
     string(TIMESTAMP BEFORE_IMAGE "%s")
-    CPMAddPackage(
-        NAME SDL2_image
-        GITHUB_REPOSITORY libsdl-org/SDL_image
-        GIT_TAG release-2.8.8
-        OPTIONS
-            "SDL2IMAGE_INSTALL ON"
-            "SDL2IMAGE_SAMPLES OFF"
-            "SDL2IMAGE_VENDORED ON"
-            "SDL2IMAGE_BUILD_SHARED_LIBS ON"
-            "BUILD_SHARED_LIBS ON"
-    )
 
-    find_package(SDL2_image REQUIRED)
+    find_package(SDL2_image QUIET)
+
+    if(SDL2_image_FOUND)
+        message(STATUS "Using system SDL2_image")
+    else()
+        message(STATUS "SDL2_image not found in system, fetching and compiling from repository...")
+        CPMAddPackage(
+            NAME SDL2_image
+            GITHUB_REPOSITORY libsdl-org/SDL_image
+            GIT_TAG release-2.8.8
+            OPTIONS
+                "SDL2IMAGE_INSTALL ON"
+                "SDL2IMAGE_SAMPLES OFF"
+                "SDL2IMAGE_VENDORED ON"
+                "SDL2IMAGE_BUILD_SHARED_LIBS ON"
+                "BUILD_SHARED_LIBS ON"
+        )
+    endif()
+
     string(TIMESTAMP AFTER_IMAGE "%s")
     math(EXPR DELTA_IMAGE "${AFTER_IMAGE} - ${BEFORE_IMAGE}")
     message(STATUS "SDL2_image TIME: ${DELTA_IMAGE}s")
@@ -68,18 +78,25 @@ if(NOT DEFINED EMSCRIPTEN)
     # SDL2_ttf
     # ----------------------------------------------------------------
     string(TIMESTAMP BEFORE_TTF "%s")
-    CPMAddPackage(
-        NAME SDL2_ttf
-        GITHUB_REPOSITORY libsdl-org/SDL_ttf
-        GIT_TAG release-2.24.0
-        OPTIONS
-            "SDL2TTF_INSTALL ON"
-            "SDL2TTF_BUILD_SHARED_LIBS ON"
-            "SDL2TTF_VENDORED ON"
-            "SDL2TTF_SAMPLES OFF"
-    )
 
-    find_package(SDL2_ttf REQUIRED)
+    find_package(SDL2_ttf QUIET)
+
+    if(SDL2_ttf_FOUND)
+        message(STATUS "Using system SDL2_ttf")
+    else()
+        message(STATUS "SDL2_ttf not found in system, fetching and compiling from repository...")
+        CPMAddPackage(
+            NAME SDL2_ttf
+            GITHUB_REPOSITORY libsdl-org/SDL_ttf
+            GIT_TAG release-2.24.0
+            OPTIONS
+                "SDL2TTF_INSTALL ON"
+                "SDL2TTF_BUILD_SHARED_LIBS ON"
+                "SDL2TTF_VENDORED ON"
+                "SDL2TTF_SAMPLES OFF"
+        )
+    endif()
+
     string(TIMESTAMP AFTER_TTF "%s")
     math(EXPR DELTA_TTF "${AFTER_TTF} - ${BEFORE_TTF}")
     message(STATUS "SDL2_ttf TIME: ${DELTA_TTF}s")
@@ -88,31 +105,47 @@ if(NOT DEFINED EMSCRIPTEN)
     # SDL2_mixer
     # ----------------------------------------------------------------
     string(TIMESTAMP BEFORE_MIXER "%s")
-    CPMAddPackage(
-        NAME SDL2_mixer
-        GITHUB_REPOSITORY libsdl-org/SDL_mixer
-        GIT_TAG release-2.8.1
-        OPTIONS
-            "SDL2MIXER_INSTALL ON"
-            "SDL2MIXER_VENDORED ON"
-            "SDL2MIXER_SAMPLES OFF"
-            "SDL2MIXER_BUILD_SHARED_LIBS ON"
-    )
 
-    find_package(SDL2_mixer REQUIRED)
+    find_package(SDL2_mixer QUIET)
+
+    if(SDL2_mixer_FOUND)
+        message(STATUS "Using system SDL2_mixer")
+    else()
+        message(STATUS "SDL2_mixer not found in system, fetching and compiling from repository...")
+        CPMAddPackage(
+            NAME SDL2_mixer
+            GITHUB_REPOSITORY libsdl-org/SDL_mixer
+            GIT_TAG release-2.8.1
+            OPTIONS
+                "SDL2MIXER_INSTALL ON"
+                "SDL2MIXER_VENDORED ON"
+                "SDL2MIXER_SAMPLES OFF"
+                "SDL2MIXER_BUILD_SHARED_LIBS ON"
+        )
+    endif()
+
     string(TIMESTAMP AFTER_MIXER "%s")
     math(EXPR DELTA_MIXER "${AFTER_MIXER} - ${BEFORE_MIXER}")
     message(STATUS "SDL2_mixer TIME: ${DELTA_MIXER}s")
 
     # ----------------------------------------------------------------
-    # Engine include directories
+    # Engine include directories (CPM.cmake only)
     # ----------------------------------------------------------------
-    list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR
-        "${SDL2_SOURCE_DIR}/include"
-        "${SDL2_image_SOURCE_DIR}/include"
-        "${SDL2_ttf_SOURCE_DIR}"
-        "${SDL2_mixer_SOURCE_DIR}/include"
-    )
+    if(SDL2_ADDED)
+        list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR "${SDL2_SOURCE_DIR}/include")
+    endif()
+
+    if(SDL2_image_ADDED)
+        list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR "${SDL2_image_SOURCE_DIR}/include")
+    endif()
+
+    if(SDL2_ttf_ADDED)
+        list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR "${SDL2_ttf_SOURCE_DIR}")
+    endif()
+
+    if(SDL2_mixer_ADDED)
+        list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR "${SDL2_mixer_SOURCE_DIR}/include")
+    endif()
 
     # ----------------------------------------------------------------
     # Engine linkable libraries (targets)
@@ -130,4 +163,3 @@ if(NOT DEFINED EMSCRIPTEN)
     # ----------------------------------------------------------------
     message(STATUS "SDL2 and extensions configured")
 endif()
-
