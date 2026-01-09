@@ -1,5 +1,5 @@
 # Define ImGui version
-set(IMGUI_VERSION 1.92.2b)
+set(IMGUI_VERSION 1.92.5)
 
 # Record the start time for ImGui setup
 string(TIMESTAMP BEFORE "%s")
