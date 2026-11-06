@@ -13,7 +13,7 @@ else()
     CPMAddPackage(
             NAME CGLM
             GITHUB_REPOSITORY recp/cglm
-            VERSION 0.9.6
+            VERSION 0.9.7
             OPTIONS
         )
 
