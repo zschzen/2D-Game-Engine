@@ -30,7 +30,7 @@ target_include_directories(${PROJECT_NAME}
 target_compile_options(${PROJECT_NAME} PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Generates a partially processed version of main header
-# target_precompile_headers(${PROJECT_NAME} PRIVATE ${ENGINE_INCLUDE_DIR}/engine.hpp)
+target_precompile_headers(${PROJECT_NAME} PRIVATE ${ENGINE_INCLUDE_DIR}/engine.hpp)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ENGINE_LIBRARIES})
 
