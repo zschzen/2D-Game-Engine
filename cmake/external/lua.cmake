@@ -99,4 +99,3 @@ if(sol2_ADDED)
 else()
     message(FATAL_ERROR "Failed to add sol2 package")
 endif()
-

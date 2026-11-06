@@ -13,10 +13,10 @@ main( int argc, char * argv[] )
     // Create window
     const int    window_width  = 640;
     const int    window_height = 480;
-    SDL_Window * window        = SDL_CreateWindow( "SDL2 + ImGui + sol2 + Lua + cglm (2D)", SDL_WINDOWPOS_CENTERED,
-                                                   SDL_WINDOWPOS_CENTERED, window_width, window_height, SDL_WINDOW_SHOWN );
+    SDL_Window * window     = SDL_CreateWindow( "SDL2 + ImGui + sol2 + Lua + cglm (2D)", SDL_WINDOWPOS_CENTERED,
+                                                SDL_WINDOWPOS_CENTERED, window_width, window_height, SDL_WINDOW_SHOWN );
 
-    SDL_Renderer * renderer    = SDL_CreateRenderer( window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED );
+    SDL_Renderer * renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED );
 
     // Setup ImGui
     IMGUI_CHECKVERSION();

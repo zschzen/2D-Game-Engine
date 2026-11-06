@@ -59,4 +59,3 @@ list(APPEND ENGINE_LIBRARIES imgui)
 string(TIMESTAMP AFTER "%s")
 math(EXPR DELTA_IMGUI "${AFTER} - ${BEFORE}")
 message(STATUS "ImGui setup time: ${DELTA_IMGUI}s")
-
