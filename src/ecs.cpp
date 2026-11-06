@@ -22,7 +22,7 @@ namespace en
     System::RemoveEntityFromSystem( Entity entity )
     {
         m_entities.erase( std::remove_if( m_entities.begin(), m_entities.end(),
-                                          [&]( Entity other ) -> bool { return other == entity; } ),
+                                          [&entity]( Entity other ) -> bool { return entity == other; } ),
                           m_entities.end() );
     }
 } // namespace en
