@@ -13,6 +13,7 @@ set(ENGINE_HEADER_FILES
     ${ENGINE_INCLUDE_DIR}/engine.hpp
     ${ENGINE_INCLUDE_DIR}/ecs.hpp
     ${ENGINE_INCLUDE_DIR}/log.hpp
+    ${ENGINE_INCLUDE_DIR}/macros.hpp
 
     # Components
     ${COMPONENTS_INCLUDE_DIR}/transform.hpp
