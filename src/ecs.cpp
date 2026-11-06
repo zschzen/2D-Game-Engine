@@ -6,4 +6,5 @@
 
 namespace en
 {
+    unsigned int IComponent::nextId = 0;
 } // namespace en

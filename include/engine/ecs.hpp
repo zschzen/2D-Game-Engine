@@ -52,6 +52,13 @@ namespace en
     // STRUCTS
     //==========================================================================================================
 
+    // Shared counter that hands out component type ids
+    struct EN_API IComponent
+    {
+      protected:
+        static unsigned int nextId; // Next unused component type id
+    };
+
     //==========================================================================================================
     // FUNCTIONS DECLARATIONS
     //==========================================================================================================
@@ -59,8 +66,16 @@ namespace en
     //--- COMPONENT --------------------------------------------------------------------------------------------
 
     // Data attached to an entity, holds no logic
-    class EN_API Component
+    template < typename T > class Component : public IComponent
     {
+      public:
+        // Get the unique id of Component<T>, assigned on first use
+        static unsigned int
+        GetId()
+        {
+            static const unsigned int id = nextId++;
+            return id;
+        }
     };
 
     //--- ENTITY -----------------------------------------------------------------------------------------------
@@ -102,6 +117,9 @@ namespace en
         // Get the entities handled by the system
         const std::vector< Entity > & GetSystemEntities() const;
 
+        // Defines the component type that entities must have to be considered by the system
+        template < typename TComponent > void RequireComponent();
+
         // Get the component types an entity needs to be handled by the system
         const Signature & GetComponentSignature() const;
 
@@ -116,6 +134,20 @@ namespace en
     class EN_API Registry
     {
     };
+
+    //==========================================================================================================
+    // FUNCTIONS DEFINITIONS
+    //==========================================================================================================
+
+    //--- SYSTEM -----------------------------------------------------------------------------------------------
+
+    // Set the component type bit in the system signature
+    template < typename TComponent >
+    void
+    System::RequireComponent()
+    {
+        m_componentSignature.set( Component< TComponent >::GetId() );
+    }
 } // namespace en
 
 #endif // !ENGINE_ECS_HPP
