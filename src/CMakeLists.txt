@@ -4,15 +4,26 @@
 set(ENGINE_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include/engine)
 set(ENGINE_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 
+set(COMPONENTS_INCLUDE_DIR ${ENGINE_INCLUDE_DIR}/components)
+set(SYSTEMS_INCLUDE_DIR ${ENGINE_INCLUDE_DIR}/systems)
+
 # Header files
 set(ENGINE_HEADER_FILES
-    ${ENGINE_INCLUDE_DIR}/engine.hpp
     ${ENGINE_INCLUDE_DIR}/api.hpp
+    ${ENGINE_INCLUDE_DIR}/engine.hpp
+    ${ENGINE_INCLUDE_DIR}/ecs.hpp
     ${ENGINE_INCLUDE_DIR}/log.hpp
+
+    # Components
+    ${COMPONENTS_INCLUDE_DIR}/transform.hpp
+
+    # Systems
+    ${SYSTEMS_INCLUDE_DIR}/movement.hpp
 )
 
 set(ENGINE_SOURCE_FILES
     ${ENGINE_SOURCE_DIR}/engine.cpp
+    ${ENGINE_SOURCE_DIR}/ecs.cpp
     ${ENGINE_SOURCE_DIR}/log.cpp
 )
 

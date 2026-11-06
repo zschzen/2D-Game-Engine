@@ -15,4 +15,10 @@
 
 #include "engine/log.hpp"
 
+#include "engine/ecs.hpp"
+
+#include "engine/components/transform.hpp"
+
+#include "engine/systems/movement.hpp"
+
 #endif // !ENGINE_HPP
