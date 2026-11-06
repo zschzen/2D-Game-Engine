@@ -60,11 +60,10 @@ if(NOT DEFINED EMSCRIPTEN)
         CPMAddPackage(
             NAME SDL2_image
             GITHUB_REPOSITORY libsdl-org/SDL_image
-            GIT_TAG release-2.8.8
+            GIT_TAG release-2.8.12
             OPTIONS
                 "SDL2IMAGE_INSTALL ON"
                 "SDL2IMAGE_SAMPLES OFF"
-                "SDL2IMAGE_VENDORED ON"
                 "SDL2IMAGE_BUILD_SHARED_LIBS ON"
                 "BUILD_SHARED_LIBS ON"
         )
@@ -92,7 +91,6 @@ if(NOT DEFINED EMSCRIPTEN)
             OPTIONS
                 "SDL2TTF_INSTALL ON"
                 "SDL2TTF_BUILD_SHARED_LIBS ON"
-                "SDL2TTF_VENDORED ON"
                 "SDL2TTF_SAMPLES OFF"
         )
     endif()
@@ -115,7 +113,7 @@ if(NOT DEFINED EMSCRIPTEN)
         CPMAddPackage(
             NAME SDL2_mixer
             GITHUB_REPOSITORY libsdl-org/SDL_mixer
-            GIT_TAG release-2.8.1
+            GIT_TAG release-2.8.2
             OPTIONS
                 "SDL2MIXER_INSTALL ON"
                 "SDL2MIXER_VENDORED ON"
