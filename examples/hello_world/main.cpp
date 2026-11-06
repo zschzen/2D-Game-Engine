@@ -1,16 +1,28 @@
+/*******************************************************************************************
+*
+*   2D Game Engine example - hello_world
+*
+*   Example licensed under an unmodified MIT license.
+*
+*   Copyright (c) 2026 Leandro Peres and contributors
+*
+********************************************************************************************/
+
 #include "engine/engine.hpp"
 #include <cstdlib>
 
 int
 main( int argc, char * argv[] )
 {
-    // Initialize SDL
+    // SDL Initialization
+    //----------------------------------------------------------
     if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
         {
             return EXIT_FAILURE;
         }
 
-    // Create window
+    // Window / Renderer Creation
+    //----------------------------------------------------------
     const int    window_width  = 640;
     const int    window_height = 480;
     SDL_Window * window     = SDL_CreateWindow( "SDL2 + ImGui + sol2 + Lua + cglm (2D)", SDL_WINDOWPOS_CENTERED,
@@ -18,7 +30,8 @@ main( int argc, char * argv[] )
 
     SDL_Renderer * renderer = SDL_CreateRenderer( window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED );
 
-    // Setup ImGui
+    // ImGui Setup
+    //----------------------------------------------------------
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO & io = ImGui::GetIO();
@@ -27,11 +40,13 @@ main( int argc, char * argv[] )
     ImGui_ImplSDL2_InitForSDLRenderer( window, renderer );
     ImGui_ImplSDLRenderer2_Init( renderer );
 
-    // Initialize Lua
+    // Lua Setup
+    //----------------------------------------------------------
     sol::state lua;
     lua.open_libraries( sol::lib::base, sol::lib::string );
 
-    // Embedded Lua script
+    // Data model shared between C++ and Lua; the script runs once,
+    // every later interaction goes through the returned table
     const char * lua_script = R"(
         return {
             message = "Hello from Lua!",
@@ -57,20 +72,25 @@ main( int argc, char * argv[] )
             return EXIT_FAILURE;
         }
 
-    // cglm variables for 2D transformations
+    // Application State
+    //----------------------------------------------------------
+    // 2D transform exposed to the transformation window sliders
     vec2  position       = { 0.0f, 0.0f };
     float rotation_angle = 0.0f; // Degrees
     vec2  scale          = { 1.0f, 1.0f };
     mat3  model_matrix;
 
-    // Main loop variables
     bool        running       = true;
     char        name_buf[128] = "";
     std::string lua_message   = app_data["message"];
     int         counter       = app_data["counter"];
 
+    // Main Loop
+    //----------------------------------------------------------
     while( running )
         {
+            // Event Handling
+            //----------------------------------------------------------
             SDL_Event event;
             while( SDL_PollEvent( &event ) )
                 {
@@ -83,18 +103,21 @@ main( int argc, char * argv[] )
                         }
                 }
 
-            // Update cglm 2D transformations
+            // 2D Transformation Update
+            //----------------------------------------------------------
             glm_mat3_identity( model_matrix );
             glm_translate2d( model_matrix, position );
             glm_rotate2d( model_matrix, glm_rad( rotation_angle ) );
             glm_scale2d( model_matrix, scale );
 
-            // Start ImGui frame
+            // Frame Begin
+            //----------------------------------------------------------
             ImGui_ImplSDLRenderer2_NewFrame();
             ImGui_ImplSDL2_NewFrame();
             ImGui::NewFrame();
 
             // Lua Interaction Window
+            //----------------------------------------------------------
             ImGui::Begin( "Lua Controls" );
             ImGui::Text( "From Lua: %s", lua_message.c_str() );
             ImGui::Text( "Counter: %d", counter );
@@ -139,6 +162,7 @@ main( int argc, char * argv[] )
             ImGui::End();
 
             // cglm 2D Transformations Window
+            //----------------------------------------------------------
             ImGui::Begin( "2D Transformations" );
             ImGui::SliderFloat2( "Position", position, -100.0f, 100.0f );
             ImGui::SliderFloat( "Rotation", &rotation_angle, 0.0f, 360.0f, "%.1f deg" );
@@ -151,7 +175,8 @@ main( int argc, char * argv[] )
                 }
             ImGui::End();
 
-            // Rendering
+            // Frame Rendering and Presenting
+            //----------------------------------------------------------
             ImGui::Render();
             SDL_SetRenderDrawColor( renderer, 45, 45, 45, 255 );
             SDL_RenderClear( renderer );
@@ -159,7 +184,8 @@ main( int argc, char * argv[] )
             SDL_RenderPresent( renderer );
         }
 
-    // Cleanup
+    // Shutdown and Resource Cleanup
+    //----------------------------------------------------------
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
