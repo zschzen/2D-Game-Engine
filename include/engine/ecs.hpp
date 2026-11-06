@@ -133,9 +133,9 @@ namespace en
         ~System() = default;
 
         // Add the entity to the system
-        void AddEntityToSystem( Entity InEntity );
+        void AddEntityToSystem( Entity entity );
         // Remove the entity from the system
-        void RemoveEntityFromSystem( Entity InEntity );
+        void RemoveEntityFromSystem( Entity entity );
 
         // Get the entities handled by the system
         const std::vector< Entity > & GetSystemEntities() const;
@@ -170,6 +170,22 @@ namespace en
     System::RequireComponent()
     {
         m_componentSignature.set( Component< TComponent >::GetId() );
+    }
+
+    //--- SYSTEM -----------------------------------------------------------------------------------------------
+
+    // Get the entities handled by the system
+    EN_FORCEINLINE const std::vector< Entity > &
+                         System::GetSystemEntities() const
+    {
+        return m_entities;
+    }
+
+    // Get the component types an entity needs to be handled by the system
+    EN_FORCEINLINE const Signature &
+    System::GetComponentSignature() const
+    {
+        return m_componentSignature;
     }
 } // namespace en
 
