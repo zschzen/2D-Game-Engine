@@ -2,7 +2,7 @@ if(USE_CCACHE)
   CPMAddPackage("gh:TheLartians/Ccache.cmake@1.2.5")
 endif()
 
-# enables sanitizers support using the the `USE_SANITIZER` flag available values are: Address,
+# enables sanitizers support using the `USE_SANITIZER` flag available values are: Address,
 # Memory, MemoryWithOrigins, Undefined, Thread, Leak, 'Address;Undefined'
 if(USE_SANITIZER OR USE_STATIC_ANALYZER)
   CPMAddPackage("gh:StableCoder/cmake-scripts#24.04")

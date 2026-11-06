@@ -6,4 +6,12 @@ include(CMakeDependentOption)
 option(BUILD_SHARED_LIBS "Build 2DEngine as a shared library" OFF)
 option(USE_CCACHE "Enable compiler cache that can drastically improve build times" ${ENGINE_IS_MAIN})
 
+#--------------------------------------------------------------------
+# Sanitizer and Careful Build Options
+#--------------------------------------------------------------------
+set(USE_SANITIZER ""
+    CACHE STRING "Sanitizer to use: Address, Memory, MemoryWithOrigins, Undefined, Thread, Leak, Address;Undefined")
+set(USE_STATIC_ANALYZER ""
+    CACHE STRING "Static analyzer to use: clang-tidy, iwyu, cppcheck")
+
 #; vim:ft=cmake
