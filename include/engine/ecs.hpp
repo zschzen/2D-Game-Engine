@@ -95,8 +95,31 @@ namespace en
             return m_id;
         }
 
+        // Operator overloading for entity objects
+        Entity & operator=( const Entity & other ) = default;
+        bool
+        operator==( const Entity & other ) const
+        {
+            return m_id == other.m_id;
+        }
+        bool
+        operator!=( const Entity & other ) const
+        {
+            return m_id != other.m_id;
+        }
+        bool
+        operator>( const Entity & other ) const
+        {
+            return m_id > other.m_id;
+        }
+        bool
+        operator<( const Entity & other ) const
+        {
+            return m_id < other.m_id;
+        }
+
       private:
-        int m_id; // Entity identifier
+        unsigned int m_id { 0 }; // Entity identifier
     };
 
     //--- SYSTEM -----------------------------------------------------------------------------------------------
