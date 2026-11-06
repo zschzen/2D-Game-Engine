@@ -7,10 +7,13 @@ set(ENGINE_SOURCE_DIR ${PROJECT_SOURCE_DIR}/src)
 # Header files
 set(ENGINE_HEADER_FILES
     ${ENGINE_INCLUDE_DIR}/engine.hpp
+    ${ENGINE_INCLUDE_DIR}/api.hpp
+    ${ENGINE_INCLUDE_DIR}/log.hpp
 )
 
 set(ENGINE_SOURCE_FILES
     ${ENGINE_SOURCE_DIR}/engine.cpp
+    ${ENGINE_SOURCE_DIR}/log.cpp
 )
 
 #--------------------------------------------------------------------
@@ -38,6 +41,7 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED YES
   CXX_EXTENSIONS NO
+  DEFINE_SYMBOL EN_EXPORTS
   VERSION ${PROJECT_VERSION}
   SOVERSION ${PROJECT_VERSION_MAJOR}
 )

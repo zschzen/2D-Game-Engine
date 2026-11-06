@@ -18,6 +18,7 @@ main( int argc, char * argv[] )
     //----------------------------------------------------------
     if( SDL_Init( SDL_INIT_VIDEO ) != 0 )
         {
+            EN_LOG_ERROR( "SDL_Init failed: {}", SDL_GetError() );
             return EXIT_FAILURE;
         }
 
@@ -68,9 +69,11 @@ main( int argc, char * argv[] )
         }
     catch( const sol::error & e )
         {
-            SDL_Log( "Lua error: %s", e.what() );
+            EN_LOG_ERROR( "Lua error: {}", e.what() );
             return EXIT_FAILURE;
         }
+
+    EN_LOG_INFO( "Lua script loaded, message: {}", app_data["message"].get< std::string >() );
 
     // Application State
     //----------------------------------------------------------
@@ -130,7 +133,7 @@ main( int argc, char * argv[] )
                         }
                     catch( const sol::error & e )
                         {
-                            SDL_Log( "Lua error: %s", e.what() );
+                            EN_LOG_ERROR( "Lua error: {}", e.what() );
                         }
                 }
 
@@ -143,7 +146,7 @@ main( int argc, char * argv[] )
                         }
                     catch( const sol::error & e )
                         {
-                            SDL_Log( "Lua error: %s", e.what() );
+                            EN_LOG_ERROR( "Lua error: {}", e.what() );
                         }
                 }
 
@@ -156,7 +159,7 @@ main( int argc, char * argv[] )
                         }
                     catch( const sol::error & e )
                         {
-                            SDL_Log( "Lua error: %s", e.what() );
+                            EN_LOG_ERROR( "Lua error: {}", e.what() );
                         }
                 }
             ImGui::End();
@@ -186,6 +189,7 @@ main( int argc, char * argv[] )
 
     // Shutdown and Resource Cleanup
     //----------------------------------------------------------
+    EN_LOG_INFO( "Shutting down" );
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
