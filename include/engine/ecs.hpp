@@ -23,6 +23,8 @@
 
 #include <bitset>  /* std::bitset */
 #include <cstddef> /* std::size_t */
+#include <cstdint> /* std::uint32_t */
+#include <limits>  /* std::numeric_limits */
 #include <vector>  /* std::vector */
 
 //==============================================================================================================
@@ -36,11 +38,20 @@ namespace en
     //==========================================================================================================
 
     // Max number of component types
-    constexpr unsigned int MAX_COMPONENTS = 32;
+    constexpr std::size_t MAX_COMPONENTS = 32;
 
     //==========================================================================================================
     // TYPEDEFS
     //==========================================================================================================
+
+    // Unique identifier of an entity
+    typedef std::uint32_t EntityId;
+
+    // Unique identifier of a component type
+    typedef std::uint32_t ComponentId;
+
+    // Sentinel that refers to no entity
+    constexpr EntityId INVALID_ENTITY_ID { std::numeric_limits< EntityId >::max() };
 
     // Bitmask of component types, one bit per type
     typedef std::bitset< MAX_COMPONENTS > Signature;
@@ -57,7 +68,7 @@ namespace en
     struct EN_API IComponent
     {
       protected:
-        static unsigned int nextId; // Next unused component type id
+        static ComponentId nextId; // Next unused component type id
     };
 
     //==========================================================================================================
@@ -71,7 +82,7 @@ namespace en
     {
       public:
         // Get the unique id of Component<T>, assigned on first use
-        static unsigned int GetId();
+        static ComponentId GetId();
     };
 
     //--- ENTITY -----------------------------------------------------------------------------------------------
@@ -81,13 +92,13 @@ namespace en
     {
       public:
         // Create an entity
-        Entity( int id )
+        Entity( EntityId id )
             : m_id( id )
         {
         }
 
         // Get the entity identifier
-        EN_FORCEINLINE int GetId() const;
+        EN_FORCEINLINE EntityId GetId() const;
 
         // Operator overloading for entity objects
         Entity & operator=( const Entity & other ) = default;
@@ -105,7 +116,7 @@ namespace en
         EN_FORCEINLINE bool operator<( const Entity & other ) const;
 
       private:
-        unsigned int m_id { 0 }; // Entity identifier
+        EntityId m_id { INVALID_ENTITY_ID }; // Entity identifier
     };
 
     //--- SYSTEM -----------------------------------------------------------------------------------------------
@@ -144,7 +155,7 @@ namespace en
     {
       public:
         virtual ~IPool()                                  = default;
-        virtual void RemoveEntityFromPool( int entityId ) = 0;
+        virtual void RemoveEntityFromPool( EntityId entityId ) = 0;
     };
 
     // Owns the objects of one component type, indexed by entity id
@@ -211,17 +222,17 @@ namespace en
 
     // Get the unique id of Component<T>, assigned on first use
     template < typename T >
-    unsigned int
+    ComponentId
     Component< T >::GetId()
     {
-        static const unsigned int id = nextId++;
+        static const ComponentId id = nextId++;
         return id;
     }
 
     //--- ENTITY -----------------------------------------------------------------------------------------------
 
     // Get the entity identifier
-    EN_FORCEINLINE int
+    EN_FORCEINLINE EntityId
     Entity::GetId() const
     {
         return m_id;
@@ -262,7 +273,8 @@ namespace en
     void
     System::RequireComponent()
     {
-        m_componentSignature.set( Component< TComponent >::GetId() );
+        const std::size_t componentId = static_cast< std::size_t >( Component< TComponent >::GetId() );
+        m_componentSignature.set( componentId );
     }
 
     // Get the entities handled by the system

@@ -8,7 +8,7 @@
 
 namespace en
 {
-    unsigned int IComponent::nextId = 0;
+    ComponentId IComponent::nextId = 0;
 
     //--- SYSTEM -----------------------------------------------------------------------------------------------
 
