@@ -9,7 +9,7 @@ AlignConsecutiveBitFields:
   Enabled: true
   PadOperators: true
 AlignConsecutiveDeclarations:
-  Enabled: true
+  Enabled: false
   AlignCompound: true
   AlignFunctionPointers: true
   PadOperators: true
@@ -80,6 +80,7 @@ IndentCaseBlocks: true
 IndentPPDirectives: AfterHash
 IndentWidth: 4
 NamespaceIndentation: All
+IndentRequiresClause: false
 
 # Type qualifiers
 PointerAlignment: Middle
