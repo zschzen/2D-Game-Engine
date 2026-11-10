@@ -23,7 +23,6 @@
 #include "engine/macros.hpp"
 
 #include <bitset>        /* std::bitset */
-#include <cassert>       /* assert */
 #include <cstddef>       /* std::size_t */
 #include <cstdint>       /* std::uint32_t */
 #include <limits>        /* std::numeric_limits */
@@ -568,7 +567,7 @@ namespace en
     Registry::GetComponent( Entity entity ) const
     {
         auto componentPool = GetComponentPool< TComponent >();
-        assert( componentPool && "Entity does not have this component pool!" );
+        EN_ASSERT( componentPool && "Entity does not have this component pool!" );
 
         return componentPool->Get( entity.GetId() );
     }

@@ -74,6 +74,7 @@ target_compile_definitions(${PROJECT_NAME} PUBLIC
 
     # Log/Debug
     $<$<BOOL:${LOG_SUPPORT}>:LOG_SUPPORT>
+    $<$<BOOL:${ASSERT_SUPPORT}>:ASSERT_SUPPORT>
 )
 
 #--------------------------------------------------------------------

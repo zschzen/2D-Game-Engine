@@ -6,7 +6,6 @@
 #include "engine/log.hpp"
 
 #include <algorithm> /* std::remove_if */
-#include <cassert>   /* assert */
 
 namespace en
 {
