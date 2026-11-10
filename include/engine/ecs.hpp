@@ -1,7 +1,7 @@
 /********************************* ECS ***********************************
  * ecs: Entity Component System
  *
- *                                NOTES
+ *                                   NOTES
  * ------------------------------------------------------------------------
  * INFO:
  * - DEFINES:
@@ -19,13 +19,20 @@
 // INCLUDES
 //==============================================================================================================
 #include "engine/api.hpp"
+#include "engine/log.hpp"
 #include "engine/macros.hpp"
 
-#include <bitset>  /* std::bitset */
-#include <cstddef> /* std::size_t */
-#include <cstdint> /* std::uint32_t */
-#include <limits>  /* std::numeric_limits */
-#include <vector>  /* std::vector */
+#include <bitset>        /* std::bitset */
+#include <cassert>       /* assert */
+#include <cstddef>       /* std::size_t */
+#include <cstdint>       /* std::uint32_t */
+#include <limits>        /* std::numeric_limits */
+#include <memory>        /* std::shared_ptr, std::make_shared */
+#include <set>           /* std::set */
+#include <type_traits>   /* std::is_pointer_v */
+#include <typeindex>     /* std::type_index */
+#include <unordered_map> /* std::unordered_map */
+#include <vector>        /* std::vector */
 
 //==============================================================================================================
 // DEFINES
@@ -57,8 +64,12 @@ namespace en
     typedef std::bitset< MAX_COMPONENTS > Signature;
 
     //==========================================================================================================
-    // ENUMERATORS
+    // CONCEPTS (C++20)
     //==========================================================================================================
+
+    // Concept to ensure type safety, allowing only valid object types (non-pointers, non-references) as components
+    template < typename T >
+    concept ComponentType = std::is_object_v< T > && !std::is_pointer_v< T >;
 
     //==========================================================================================================
     // STRUCTS
@@ -144,17 +155,17 @@ namespace en
         const Signature & GetComponentSignature() const;
 
       private:
-        Signature             m_componentSignature {}; // Component types an entity needs to be handled by the system
-        std::vector< Entity > m_entities {};           // Entities that match the component signature
+        Signature m_componentSignature {};   // Component types an entity needs to be handled by the system
+        std::vector< Entity > m_entities {}; // Entities that match the component signature
     };
 
     //--- POOL -------------------------------------------------------------------------------------------------
 
-    //
+    // Base interface for component pools
     class IPool
     {
       public:
-        virtual ~IPool()                                  = default;
+        virtual ~IPool()                                       = default;
         virtual void RemoveEntityFromPool( EntityId entityId ) = 0;
     };
 
@@ -192,9 +203,16 @@ namespace en
         // Get the object at the given index
         EN_FORCEINLINE T & operator[]( std::size_t index );
 
+        // Implementation for IPool interface method
+        virtual void
+        RemoveEntityFromPool( EntityId entityId ) override
+        {
+            // Optional: Handle cleanup if needed
+        }
+
       private:
-        std::vector< T > m_data {};    // Objects stored in the pool, indexed by entity id
-        std::size_t      m_size { 0 }; // Number of objects currently stored in the pool
+        std::vector< T > m_data {}; // Objects stored in the pool, indexed by entity id
+        std::size_t m_size { 0 };   // Number of objects currently stored in the pool
     };
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
@@ -203,15 +221,60 @@ namespace en
     class EN_API Registry
     {
       public:
+        // --- Constructors ----------------------------------------------------
         Registry()  = default;
         ~Registry() = default;
 
-        // Entity CreateEntity();
-        // void   KillEntity( Entity entity );
-        //void AddSystem(...);
+        // Process the entities queued for addition and removal
+        void Update();
+
+        // --- Entities --------------------------------------------------------
+        // Signals to create an entity
+        Entity CreateEntity();
+        // Signals to remove an entity
+        void KillEntity( Entity entity );
+        void AddEntityToSystems( Entity entity );
+        void RemoveEntityFromSystems( Entity entity );
+
+        // --- Components ------------------------------------------------------
+        // Attach a component to the given entity
+        template < typename TComponent, typename... TArgs >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE void AddComponent( Entity entity, TArgs &&... args );
+
+        // Detach a component from the given entity
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE void RemoveComponent( Entity entity );
+
+        // Returns if the given entity has the component
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE bool HasComponent( Entity entity ) const;
+
+        // Returns the requested component from the given entity
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE TComponent & GetComponent( Entity entity ) const;
 
       private:
-        std::size_t m_numEntities { 0 }; // Total amount of entities was added to the scene
+        // --- Component Pool Helpers ------------------------------------------
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetComponentPool( bool bCreateIfMissing = false ) const;
+
+        // --- Entities --------------------------------------------------------
+        std::size_t m_numEntities { 0 };            // Total amount of entities was added to the scene
+
+        std::set< Entity > m_entitiesToBeAdded {};  // Entities to add on next update
+        std::set< Entity > m_entitiesToBeKilled {}; // Entities to remove on next update
+
+        // --- Components ------------------------------------------------------
+        std::vector< std::shared_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
+        std::vector< Signature > m_entityComponentSignatures {};     // Components are enabled per entity
+
+        // --- Systems ---------------------------------------------------------
+        std::unordered_map< std::type_index, std::shared_ptr< System > > m_systems {}; // Systems indexed by their type
     };
 
     //==========================================================================================================
@@ -306,7 +369,7 @@ namespace en
     // Get the number of objects stored in the pool
     template < typename T >
     EN_FORCEINLINE std::size_t
-                   Pool< T >::GetSize() const
+    Pool< T >::GetSize() const
     {
         return m_data.size();
     }
@@ -340,7 +403,14 @@ namespace en
     EN_FORCEINLINE void
     Pool< T >::Set( std::size_t index, T object )
     {
+        if( index >= m_data.size() )
+            {
+                // Resize by always doubling the current capacity
+                m_data.resize( index * 2 );
+            }
+
         m_data[index] = object;
+        ++m_size;
     }
 
     // Get the object at the given index
@@ -358,6 +428,122 @@ namespace en
     {
         return m_data[index];
     }
+
+    //--- REGISTRY ---------------------------------------------------------------------------------------------
+
+    // Get component pool, optionally creating it if it doesn't exist
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    Registry::GetComponentPool( bool bCreateIfMissing ) const
+    {
+        const auto componentId = Component< TComponent >::GetId();
+
+        // Ensure component pools vector has enough capacity
+        //----------------------------------------------------------
+        if( m_componentPools.size() <= componentId )
+            {
+                if( !bCreateIfMissing )
+                    {
+                        return nullptr;
+                    }
+
+                // Cast away constness to allow lazy allocation of internal storage within a const query
+                const_cast< Registry * >( this )->m_componentPools.resize( componentId + 1, {} );
+            }
+
+        // Initialize pool if it doesn't exist yet
+        //----------------------------------------------------------
+        if( !m_componentPools[componentId] )
+            {
+                if( !bCreateIfMissing )
+                    {
+                        return nullptr;
+                    }
+
+                const_cast< Registry * >( this )->m_componentPools[componentId]
+                    = std::make_shared< Pool< TComponent > >();
+            }
+
+        return std::static_pointer_cast< Pool< TComponent > >( m_componentPools[componentId] );
+    }
+
+    // Attach a component to the given entity
+    template < typename TComponent, typename... TArgs >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE void
+    Registry::AddComponent( Entity entity, TArgs &&... args )
+    {
+        const auto componentId   = Component< TComponent >::GetId();
+        const auto entityId      = entity.GetId();
+
+        // Ensure component pool
+        //----------------------------------------------------------
+        const auto componentPool = GetComponentPool< TComponent >();
+
+        // Attach component to entity
+        //----------------------------------------------------------
+        // Instantiate component on the stack
+        TComponent newComponent( std::forward< TArgs >( args )... );
+
+        componentPool->Set( entityId, newComponent );             // Add component to the pool
+
+        m_entityComponentSignatures[entityId].set( componentId ); // Enable component signature of the entity
+
+        EN_LOG_INFO( "Component id '{}' was added to entity id '{}'", componentId, entityId );
+    }
+
+    // Detach a component from the given entity
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE void
+    Registry::RemoveComponent( Entity entity )
+    {
+        const auto componentId = Component< TComponent >::GetId();
+        const auto entityId    = entity.GetId();
+
+        if( auto componentPool = GetComponentPool< TComponent >() )
+            {
+                // TODO: componentPool->RemoveEntityFromPool( entityId );
+            }
+
+        if( entityId < m_entityComponentSignatures.size() )
+            {
+                m_entityComponentSignatures[entityId].set( componentId, false );
+            }
+
+        EN_LOG_INFO( "Component id '{}' was removed from entity id '{}'", componentId, entityId );
+    }
+
+    // Returns if the given entity has the component
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE bool
+    Registry::HasComponent( Entity entity ) const
+    {
+        const auto componentId = Component< TComponent >::GetId();
+        const auto entityId    = entity.GetId();
+
+        if( entityId >= m_entityComponentSignatures.size() )
+            {
+                return false;
+            }
+
+        return m_entityComponentSignatures[entityId].test( componentId );
+    }
+
+    // Returns the requested component from the given entity
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE TComponent &
+    Registry::GetComponent( Entity entity ) const
+    {
+        auto componentPool = GetComponentPool< TComponent >();
+        assert( componentPool && "Entity does not have this component pool!" );
+
+        return componentPool->Get( entity.GetId() );
+    }
+
 } // namespace en
 
 #endif // !ENGINE_ECS_HPP
