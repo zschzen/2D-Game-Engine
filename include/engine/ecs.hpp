@@ -259,9 +259,20 @@ namespace en
 
       private:
         // --- Component Pool Helpers ------------------------------------------
+        // Get the pool for the given component type, or nullptr if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetComponentPool( bool bCreateIfMissing = false ) const;
+        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetComponentPool() const;
+
+        // Create the pool for the given component type, if it doesn't exist yet
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > CreateComponentPool();
+
+        // Get the pool for the given component type, creating it if it doesn't exist
+        template < typename TComponent >
+        requires ComponentType< TComponent >
+        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetOrCreateComponentPool();
 
         // --- Entities --------------------------------------------------------
         std::size_t m_numEntities { 0 };            // Total amount of entities was added to the scene
@@ -431,11 +442,27 @@ namespace en
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
 
-    // Get component pool, optionally creating it if it doesn't exist
+    // Get the pool for the given component type, or nullptr if it doesn't exist
     template < typename TComponent >
     requires ComponentType< TComponent >
     EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
-    Registry::GetComponentPool( bool bCreateIfMissing ) const
+    Registry::GetComponentPool() const
+    {
+        const auto componentId = Component< TComponent >::GetId();
+
+        if( componentId >= m_componentPools.size() )
+            {
+                return nullptr;
+            }
+
+        return std::static_pointer_cast< Pool< TComponent > >( m_componentPools[componentId] );
+    }
+
+    // Create the pool for the given component type, if it doesn't exist yet
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    Registry::CreateComponentPool()
     {
         const auto componentId = Component< TComponent >::GetId();
 
@@ -443,29 +470,31 @@ namespace en
         //----------------------------------------------------------
         if( m_componentPools.size() <= componentId )
             {
-                if( !bCreateIfMissing )
-                    {
-                        return nullptr;
-                    }
-
-                // Cast away constness to allow lazy allocation of internal storage within a const query
-                const_cast< Registry * >( this )->m_componentPools.resize( componentId + 1, {} );
+                m_componentPools.resize( componentId + 1, {} );
             }
 
         // Initialize pool if it doesn't exist yet
         //----------------------------------------------------------
         if( !m_componentPools[componentId] )
             {
-                if( !bCreateIfMissing )
-                    {
-                        return nullptr;
-                    }
-
-                const_cast< Registry * >( this )->m_componentPools[componentId]
-                    = std::make_shared< Pool< TComponent > >();
+                m_componentPools[componentId] = std::make_shared< Pool< TComponent > >();
             }
 
         return std::static_pointer_cast< Pool< TComponent > >( m_componentPools[componentId] );
+    }
+
+    // Get the pool for the given component type, creating it if it doesn't exist
+    template < typename TComponent >
+    requires ComponentType< TComponent >
+    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    Registry::GetOrCreateComponentPool()
+    {
+        if( auto componentPool = GetComponentPool< TComponent >() )
+            {
+                return componentPool;
+            }
+
+        return CreateComponentPool< TComponent >();
     }
 
     // Attach a component to the given entity
@@ -479,7 +508,7 @@ namespace en
 
         // Ensure component pool
         //----------------------------------------------------------
-        const auto componentPool = GetComponentPool< TComponent >( true );
+        const auto componentPool = GetOrCreateComponentPool< TComponent >();
 
         // Attach component to entity
         //----------------------------------------------------------
