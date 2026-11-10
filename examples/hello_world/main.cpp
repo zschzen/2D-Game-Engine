@@ -24,8 +24,8 @@ main( int argc, char * argv[] )
 
     // Window / Renderer Creation
     //----------------------------------------------------------
-    const int    window_width  = 640;
-    const int    window_height = 480;
+    const int window_width  = 640;
+    const int window_height = 480;
     SDL_Window * window     = SDL_CreateWindow( "SDL2 + ImGui + sol2 + Lua + cglm (2D)", SDL_WINDOWPOS_CENTERED,
                                                 SDL_WINDOWPOS_CENTERED, window_width, window_height, SDL_WINDOW_SHOWN );
 
@@ -78,15 +78,15 @@ main( int argc, char * argv[] )
     // Application State
     //----------------------------------------------------------
     // 2D transform exposed to the transformation window sliders
-    vec2  position       = { 0.0f, 0.0f };
+    vec2 position        = { 0.0f, 0.0f };
     float rotation_angle = 0.0f; // Degrees
-    vec2  scale          = { 1.0f, 1.0f };
-    mat3  model_matrix;
+    vec2 scale           = { 1.0f, 1.0f };
+    mat3 model_matrix;
 
-    bool        running       = true;
-    char        name_buf[128] = "";
-    std::string lua_message   = app_data["message"];
-    int         counter       = app_data["counter"];
+    bool running            = true;
+    char name_buf[128]      = "";
+    std::string lua_message = app_data["message"];
+    int counter             = app_data["counter"];
 
     // Main Loop
     //----------------------------------------------------------

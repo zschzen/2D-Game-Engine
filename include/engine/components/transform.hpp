@@ -20,8 +20,8 @@ namespace en
     // Transform component
     struct TransformComponent
     {
-        vec2   position; // Position of the entity
-        vec2   scale;    // Scale factor on each axis
+        vec2 position;   // Position of the entity
+        vec2 scale;      // Scale factor on each axis
         double rotation; // Rotation angle
     };
 } // namespace en

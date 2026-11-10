@@ -61,7 +61,7 @@ namespace en
     // Log entry
     struct LogEntry
     {
-        LogType     type;    // Severity of the entry
+        LogType type;        // Severity of the entry
         std::string message; // Formatted text, tag and timestamp included
     };
 
