@@ -405,8 +405,8 @@ namespace en
     {
         if( index >= m_data.size() )
             {
-                // Resize by always doubling the current capacity
-                m_data.resize( index * 2 );
+                // Ensure the pool can hold the given index
+                m_data.resize( index + 1 );
             }
 
         m_data[index] = object;
@@ -479,7 +479,7 @@ namespace en
 
         // Ensure component pool
         //----------------------------------------------------------
-        const auto componentPool = GetComponentPool< TComponent >();
+        const auto componentPool = GetComponentPool< TComponent >( true );
 
         // Attach component to entity
         //----------------------------------------------------------
