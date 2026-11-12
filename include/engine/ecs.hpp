@@ -6,10 +6,6 @@
  * INFO:
  * - DEFINES:
  *
- * TODO:
- *   - Component and Registry are empty placeholders.
- *   - System methods are declared, not defined yet.
- *
  *************************************************************************/
 
 #ifndef ENGINE_ECS_HPP
@@ -32,6 +28,7 @@
 #include <type_traits>   /* std::is_const_v, std::is_pointer_v, std::is_volatile_v */
 #include <typeindex>     /* std::type_index */
 #include <unordered_map> /* std::unordered_map */
+#include <utility>       /* std::forward, std::move */
 #include <vector>        /* std::vector */
 
 //==============================================================================================================
@@ -67,11 +64,19 @@ namespace en
     // CONCEPTS
     //==========================================================================================================
 
+    class System;
+
     // Concept for types that can be stored in a component pool
     template < typename T >
     concept ComponentType = std::semiregular< T >        // Pool copies values and default-constructs them
                             && !std::is_pointer_v< T >   // Pool owns the component, not the pointee
                             && !std::is_volatile_v< T >; // std::vector cannot hold volatile objects
+
+    // Concept for types the registry can store and retrieve as shared_ptr< System >
+    template < typename T >
+    concept SystemType = std::derived_from< T, System > // Public, unambiguous inheritance: T* converts to System*
+                         && !std::is_const_v< T >       // const T* does not convert to System*
+                         && !std::is_volatile_v< T >;   // volatile T* does not convert to System*
 
     //==========================================================================================================
     // STRUCTS
@@ -235,8 +240,6 @@ namespace en
         Entity CreateEntity();
         // Signals to remove an entity
         void KillEntity( Entity entity );
-        void AddEntityToSystems( Entity entity );
-        void RemoveEntityFromSystems( Entity entity );
 
         // --- Components ------------------------------------------------------
         // Attach a component to the given entity
@@ -259,6 +262,38 @@ namespace en
         requires ComponentType< TComponent >
         TComponent & GetComponent( Entity entity ) const;
 
+        // --- Systems ---------------------------------------------------------
+        // Add a system of the given type, constructing it with the given arguments
+        template < typename TSystem, typename... TArgs >
+        requires SystemType< TSystem > && std::constructible_from< TSystem, TArgs &&... >
+        void AddSystem( TArgs &&... args );
+
+        // Remove the system of the given type
+        template < typename TSystem >
+        requires SystemType< TSystem >
+        void RemoveSystem();
+
+        // Returns if the given system type is registered
+        template < typename TSystem >
+        requires SystemType< TSystem >
+        bool HasSystem() const;
+
+        // Returns the requested system from the registry
+        // Throws std::out_of_range if it is not registered
+        template < typename TSystem >
+        requires SystemType< TSystem >
+        TSystem & GetSystem();
+
+        // Returns the requested system from the registry, read-only
+        // Throws std::out_of_range if it is not registered
+        template < typename TSystem >
+        requires SystemType< TSystem >
+        const TSystem & GetSystem() const;
+
+        // Add and remove entities from all systems that match their component signature
+        void AddEntityToSystems( Entity entity );
+        void RemoveEntityFromSystems( Entity entity );
+
       private:
         // --- Component Pool Helpers ------------------------------------------
         // Get the pool for the given component type, or nullptr if it doesn't exist
@@ -275,6 +310,12 @@ namespace en
         template < typename TComponent >
         requires ComponentType< TComponent >
         std::shared_ptr< Pool< TComponent > > GetOrCreateComponentPool();
+
+        // --- System Helpers --------------------------------------------------
+        // Get the unique key of the given system type
+        template < typename TSystem >
+        requires SystemType< TSystem >
+        EN_FORCEINLINE static std::type_index SystemKey();
 
         // --- Entities --------------------------------------------------------
         std::size_t m_numEntities { 0 };            // Total amount of entities was added to the scene
@@ -443,6 +484,64 @@ namespace en
     }
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
+
+    // Get the unique key of the given system type
+    template < typename TSystem >
+    requires SystemType< TSystem >
+    EN_FORCEINLINE std::type_index
+    Registry::SystemKey()
+    {
+        return std::type_index( typeid( TSystem ) );
+    }
+
+    // Add a system of the given type, constructing it with the given arguments
+    template < typename TSystem, typename... TArgs >
+    requires SystemType< TSystem > && std::constructible_from< TSystem, TArgs &&... >
+    void
+    Registry::AddSystem( TArgs &&... args )
+    {
+        const auto systemKey = SystemKey< TSystem >();
+
+        EN_ASSERT( !m_systems.contains( systemKey ) && "System is already registered!" );
+
+        m_systems.try_emplace( systemKey, std::make_shared< TSystem >( std::forward< TArgs >( args )... ) );
+    }
+
+    // Remove the system of the given type
+    template < typename TSystem >
+    requires SystemType< TSystem >
+    void
+    Registry::RemoveSystem()
+    {
+        m_systems.erase( SystemKey< TSystem >() );
+    }
+
+    // Returns if the given system type is registered
+    template < typename TSystem >
+    requires SystemType< TSystem >
+    bool
+    Registry::HasSystem() const
+    {
+        return m_systems.contains( SystemKey< TSystem >() );
+    }
+
+    // Returns the requested system from the registry
+    template < typename TSystem >
+    requires SystemType< TSystem >
+    TSystem &
+    Registry::GetSystem()
+    {
+        return static_cast< TSystem & >( *( m_systems.at( SystemKey< TSystem >() ) ) );
+    }
+
+    // Returns the requested system from the registry, read-only
+    template < typename TSystem >
+    requires SystemType< TSystem >
+    const TSystem &
+    Registry::GetSystem() const
+    {
+        return static_cast< const TSystem & >( *( m_systems.at( SystemKey< TSystem >() ) ) );
+    }
 
     // Get the pool for the given component type, or nullptr if it doesn't exist
     template < typename TComponent >
