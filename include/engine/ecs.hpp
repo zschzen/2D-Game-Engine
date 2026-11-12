@@ -555,12 +555,8 @@ namespace en
         const auto componentId = Component< TComponent >::GetId();
         const auto entityId    = entity.GetId();
 
-        if( entityId >= m_entityComponentSignatures.size() )
-            {
-                return false;
-            }
-
-        return m_entityComponentSignatures[entityId].test( componentId );
+        return ( entityId < m_entityComponentSignatures.size() )
+               && m_entityComponentSignatures[entityId].test( componentId );
     }
 
     // Returns the requested component from the given entity
