@@ -145,13 +145,13 @@ namespace en
         void RemoveEntityFromSystem( Entity entity );
 
         // Get the entities handled by the system
-        const std::vector< Entity > & GetSystemEntities() const;
+        EN_FORCEINLINE const std::vector< Entity > & GetSystemEntities() const;
 
         // Defines the component type that entities must have to be considered by the system
         template < typename TComponent > void RequireComponent();
 
         // Get the component types an entity needs to be handled by the system
-        const Signature & GetComponentSignature() const;
+        EN_FORCEINLINE const Signature & GetComponentSignature() const;
 
       private:
         Signature m_componentSignature {};   // Component types an entity needs to be handled by the system
@@ -188,13 +188,13 @@ namespace en
 
         // --- Modifiers -------------------------------------------------------
         // Resize the pool to hold the given number of objects
-        EN_FORCEINLINE void Resize( std::size_t newSize );
+        void Resize( std::size_t newSize );
         // Remove all objects from the pool
-        EN_FORCEINLINE void Clear();
+        void Clear();
         // Add an object to the end of the pool
-        EN_FORCEINLINE void Add( T object );
+        void Add( T object );
         // Overwrite the object at the given index
-        EN_FORCEINLINE void Set( std::size_t index, T object );
+        void Set( std::size_t index, T object );
 
         // --- Element Access --------------------------------------------------
         // Get the object at the given index
@@ -239,39 +239,39 @@ namespace en
         // Attach a component to the given entity
         template < typename TComponent, typename... TArgs >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE void AddComponent( Entity entity, TArgs &&... args );
+        void AddComponent( Entity entity, TArgs &&... args );
 
         // Detach a component from the given entity
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE void RemoveComponent( Entity entity );
+        void RemoveComponent( Entity entity );
 
         // Returns if the given entity has the component
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE bool HasComponent( Entity entity ) const;
+        bool HasComponent( Entity entity ) const;
 
         // Returns the requested component from the given entity
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE TComponent & GetComponent( Entity entity ) const;
+        TComponent & GetComponent( Entity entity ) const;
 
       private:
         // --- Component Pool Helpers ------------------------------------------
         // Get the pool for the given component type, or nullptr if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetComponentPool() const;
+        std::shared_ptr< Pool< TComponent > > GetComponentPool() const;
 
         // Create the pool for the given component type, if it doesn't exist yet
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > CreateComponentPool();
+        std::shared_ptr< Pool< TComponent > > CreateComponentPool();
 
         // Get the pool for the given component type, creating it if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        EN_FORCEINLINE std::shared_ptr< Pool< TComponent > > GetOrCreateComponentPool();
+        std::shared_ptr< Pool< TComponent > > GetOrCreateComponentPool();
 
         // --- Entities --------------------------------------------------------
         std::size_t m_numEntities { 0 };            // Total amount of entities was added to the scene
@@ -386,7 +386,7 @@ namespace en
 
     // Resize the pool to hold the given number of objects
     template < typename T >
-    EN_FORCEINLINE void
+    void
     Pool< T >::Resize( std::size_t newSize )
     {
         m_data.resize( newSize );
@@ -394,7 +394,7 @@ namespace en
 
     // Remove all objects from the pool
     template < typename T >
-    EN_FORCEINLINE void
+    void
     Pool< T >::Clear()
     {
         m_data.clear();
@@ -402,7 +402,7 @@ namespace en
 
     // Add an object to the end of the pool
     template < typename T >
-    EN_FORCEINLINE void
+    void
     Pool< T >::Add( T object )
     {
         m_data.push_back( object );
@@ -410,7 +410,7 @@ namespace en
 
     // Overwrite the object at the given index
     template < typename T >
-    EN_FORCEINLINE void
+    void
     Pool< T >::Set( std::size_t index, T object )
     {
         if( index >= m_data.size() )
@@ -444,7 +444,7 @@ namespace en
     // Get the pool for the given component type, or nullptr if it doesn't exist
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    std::shared_ptr< Pool< TComponent > >
     Registry::GetComponentPool() const
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -460,7 +460,7 @@ namespace en
     // Create the pool for the given component type, if it doesn't exist yet
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    std::shared_ptr< Pool< TComponent > >
     Registry::CreateComponentPool()
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -485,7 +485,7 @@ namespace en
     // Get the pool for the given component type, creating it if it doesn't exist
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE std::shared_ptr< Pool< TComponent > >
+    std::shared_ptr< Pool< TComponent > >
     Registry::GetOrCreateComponentPool()
     {
         if( auto componentPool = GetComponentPool< TComponent >() )
@@ -499,7 +499,7 @@ namespace en
     // Attach a component to the given entity
     template < typename TComponent, typename... TArgs >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE void
+    void
     Registry::AddComponent( Entity entity, TArgs &&... args )
     {
         const auto componentId   = Component< TComponent >::GetId();
@@ -524,7 +524,7 @@ namespace en
     // Detach a component from the given entity
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE void
+    void
     Registry::RemoveComponent( Entity entity )
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -546,7 +546,7 @@ namespace en
     // Returns if the given entity has the component
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE bool
+    bool
     Registry::HasComponent( Entity entity ) const
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -563,7 +563,7 @@ namespace en
     // Returns the requested component from the given entity
     template < typename TComponent >
     requires ComponentType< TComponent >
-    EN_FORCEINLINE TComponent &
+    TComponent &
     Registry::GetComponent( Entity entity ) const
     {
         auto componentPool = GetComponentPool< TComponent >();
