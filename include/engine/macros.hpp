@@ -50,7 +50,11 @@
 #endif
 
 // Unused parameter suppression
-#define EN_UNUSED( x ) (void)( x )
+#define EN_UNUSED( x )                      (void)( x )
+
+// Bitmask checks
+// Check if all bits set in required are also set in flags
+#define EN_FLAGS_CONTAIN( flags, required ) ( ( ( flags ) & ( required ) ) == ( required ) )
 
 // Assertion macros
 #if defined( ASSERT_SUPPORT )
