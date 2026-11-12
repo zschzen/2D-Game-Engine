@@ -23,12 +23,13 @@
 #include "engine/macros.hpp"
 
 #include <bitset>        /* std::bitset */
+#include <concepts>      /* std::semiregular, std::derived_from, std::constructible_from */
 #include <cstddef>       /* std::size_t */
 #include <cstdint>       /* std::uint32_t */
 #include <limits>        /* std::numeric_limits */
 #include <memory>        /* std::shared_ptr, std::make_shared */
 #include <set>           /* std::set */
-#include <type_traits>   /* std::is_pointer_v */
+#include <type_traits>   /* std::is_const_v, std::is_pointer_v, std::is_volatile_v */
 #include <typeindex>     /* std::type_index */
 #include <unordered_map> /* std::unordered_map */
 #include <vector>        /* std::vector */
@@ -63,12 +64,14 @@ namespace en
     typedef std::bitset< MAX_COMPONENTS > Signature;
 
     //==========================================================================================================
-    // CONCEPTS (C++20)
+    // CONCEPTS
     //==========================================================================================================
 
-    // Concept to ensure type safety, allowing only valid object types (non-pointers, non-references) as components
+    // Concept for types that can be stored in a component pool
     template < typename T >
-    concept ComponentType = std::is_object_v< T > && !std::is_pointer_v< T >;
+    concept ComponentType = std::semiregular< T >        // Pool copies values and default-constructs them
+                            && !std::is_pointer_v< T >   // Pool owns the component, not the pointee
+                            && !std::is_volatile_v< T >; // std::vector cannot hold volatile objects
 
     //==========================================================================================================
     // STRUCTS
@@ -88,7 +91,7 @@ namespace en
     //--- COMPONENT --------------------------------------------------------------------------------------------
 
     // Data attached to an entity, holds no logic
-    template < typename T > class Component : public IComponent
+    template < ComponentType T > class Component : public IComponent
     {
       public:
         // Get the unique id of Component<T>, assigned on first use
@@ -148,7 +151,7 @@ namespace en
         EN_FORCEINLINE const std::vector< Entity > & GetSystemEntities() const;
 
         // Defines the component type that entities must have to be considered by the system
-        template < typename TComponent > void RequireComponent();
+        template < ComponentType TComponent > void RequireComponent();
 
         // Get the component types an entity needs to be handled by the system
         EN_FORCEINLINE const Signature & GetComponentSignature() const;
@@ -169,7 +172,7 @@ namespace en
     };
 
     // Owns the objects of one component type, indexed by entity id
-    template < typename T > class Pool : public IPool
+    template < ComponentType T > class Pool : public IPool
     {
       public:
         Pool( std::size_t capacity = 100u )
@@ -238,7 +241,7 @@ namespace en
         // --- Components ------------------------------------------------------
         // Attach a component to the given entity
         template < typename TComponent, typename... TArgs >
-        requires ComponentType< TComponent >
+        requires ComponentType< TComponent > && std::constructible_from< TComponent, TArgs &&... >
         void AddComponent( Entity entity, TArgs &&... args );
 
         // Detach a component from the given entity
@@ -294,7 +297,7 @@ namespace en
     //--- COMPONENT --------------------------------------------------------------------------------------------
 
     // Get the unique id of Component<T>, assigned on first use
-    template < typename T >
+    template < ComponentType T >
     ComponentId
     Component< T >::GetId()
     {
@@ -342,7 +345,7 @@ namespace en
     //--- SYSTEM -----------------------------------------------------------------------------------------------
 
     // Set the component type bit in the system signature
-    template < typename TComponent >
+    template < ComponentType TComponent >
     void
     System::RequireComponent()
     {
@@ -369,7 +372,7 @@ namespace en
     //--- POOL -------------------------------------------------------------------------------------------------
 
     // Check if the pool holds no objects
-    template < typename T >
+    template < ComponentType T >
     EN_FORCEINLINE bool
     Pool< T >::IsEmpty() const
     {
@@ -377,7 +380,7 @@ namespace en
     }
 
     // Get the number of objects stored in the pool
-    template < typename T >
+    template < ComponentType T >
     EN_FORCEINLINE std::size_t
     Pool< T >::GetSize() const
     {
@@ -385,7 +388,7 @@ namespace en
     }
 
     // Resize the pool to hold the given number of objects
-    template < typename T >
+    template < ComponentType T >
     void
     Pool< T >::Resize( std::size_t newSize )
     {
@@ -393,7 +396,7 @@ namespace en
     }
 
     // Remove all objects from the pool
-    template < typename T >
+    template < ComponentType T >
     void
     Pool< T >::Clear()
     {
@@ -401,7 +404,7 @@ namespace en
     }
 
     // Add an object to the end of the pool
-    template < typename T >
+    template < ComponentType T >
     void
     Pool< T >::Add( T object )
     {
@@ -409,7 +412,7 @@ namespace en
     }
 
     // Overwrite the object at the given index
-    template < typename T >
+    template < ComponentType T >
     void
     Pool< T >::Set( std::size_t index, T object )
     {
@@ -424,7 +427,7 @@ namespace en
     }
 
     // Get the object at the given index
-    template < typename T >
+    template < ComponentType T >
     EN_FORCEINLINE T &
     Pool< T >::Get( std::size_t index )
     {
@@ -432,7 +435,7 @@ namespace en
     }
 
     // Get the object at the given index
-    template < typename T >
+    template < ComponentType T >
     EN_FORCEINLINE T &
     Pool< T >::operator[]( std::size_t index )
     {
@@ -498,7 +501,7 @@ namespace en
 
     // Attach a component to the given entity
     template < typename TComponent, typename... TArgs >
-    requires ComponentType< TComponent >
+    requires ComponentType< TComponent > && std::constructible_from< TComponent, TArgs &&... >
     void
     Registry::AddComponent( Entity entity, TArgs &&... args )
     {
