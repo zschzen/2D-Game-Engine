@@ -531,7 +531,8 @@ namespace en
     TSystem &
     Registry::GetSystem()
     {
-        return static_cast< TSystem & >( *( m_systems.at( SystemKey< TSystem >() ) ) );
+        System & system = *( m_systems.at( SystemKey< TSystem >() ) );
+        return static_cast< TSystem & >( system );
     }
 
     // Returns the requested system from the registry, read-only
@@ -540,7 +541,8 @@ namespace en
     const TSystem &
     Registry::GetSystem() const
     {
-        return static_cast< const TSystem & >( *( m_systems.at( SystemKey< TSystem >() ) ) );
+        const System & system = *( m_systems.at( SystemKey< TSystem >() ) );
+        return static_cast< const TSystem & >( system );
     }
 
     // Get the pool for the given component type, or nullptr if it doesn't exist
