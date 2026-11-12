@@ -290,8 +290,10 @@ namespace en
         requires SystemType< TSystem >
         const TSystem & GetSystem() const;
 
-        // Add and remove entities from all systems that match their component signature
+        // Adds the entity to all systems that match its component signature
         void AddEntityToSystems( Entity entity );
+
+        // Removes the entity from all systems that match its component signature
         void RemoveEntityFromSystems( Entity entity );
 
       private:
