@@ -49,6 +49,9 @@
 #    define EN_UNLIKELY( x ) ( x )
 #endif
 
+// Unused parameter suppression
+#define EN_UNUSED( x ) (void)( x )
+
 // Assertion macros
 #if defined( ASSERT_SUPPORT )
 #    define EN_ASSERT( ... ) assert( __VA_ARGS__ )

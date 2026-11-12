@@ -61,6 +61,9 @@ class MovementSystem : public en::System
 int
 main( int argc, char * argv[] )
 {
+    EN_UNUSED( argc );
+    EN_UNUSED( argv );
+
     // Registry and System Creation
     //----------------------------------------------------------
     en::Registry registry {};
