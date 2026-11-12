@@ -63,4 +63,33 @@ namespace en
         EN_LOG_INFO( "Entity '{}' was killed", entity.GetId() );
     }
 
+    // Adds the entity to all systems that match its component signature
+    void
+    Registry::AddEntityToSystems( Entity entity )
+    {
+        const auto entityId                   = entity.GetId();
+        const auto & entityComponentSignature = m_entityComponentSignatures[entityId];
+
+        for( const auto & [typeIndex, system] : m_systems )
+            {
+                const auto & systemComponentSignature = system->GetComponentSignature();
+
+                // Does the system component signature match the entity one?
+                if( EN_FLAGS_CONTAIN( entityComponentSignature, systemComponentSignature ) )
+                    {
+                        system->AddEntityToSystem( entity );
+                    }
+            }
+    }
+
+    // Removes the entity from all systems that hold it
+    void
+    Registry::RemoveEntityFromSystems( Entity entity )
+    {
+        for( const auto & [typeIndex, system] : m_systems )
+            {
+                system->RemoveEntityFromSystem( entity );
+            }
+    }
+
 } // namespace en

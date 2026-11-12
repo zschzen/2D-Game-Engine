@@ -293,7 +293,7 @@ namespace en
         // Adds the entity to all systems that match its component signature
         void AddEntityToSystems( Entity entity );
 
-        // Removes the entity from all systems that match its component signature
+        // Removes the entity from all systems that hold it
         void RemoveEntityFromSystems( Entity entity );
 
       private:
