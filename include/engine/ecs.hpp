@@ -164,8 +164,8 @@ namespace en
     class IPool
     {
       public:
-        virtual ~IPool()                                       = default;
-        virtual void RemoveEntityFromPool( EntityId entityId ) = 0;
+        virtual ~IPool()                         = default;
+        virtual void Remove( EntityId entityId ) = 0;
     };
 
     // Owns the objects of one component type, indexed by entity id
@@ -204,9 +204,9 @@ namespace en
 
         // Implementation for IPool interface method
         virtual void
-        RemoveEntityFromPool( EntityId entityId ) override
+        Remove( EntityId entityId ) override
         {
-            // Optional: Handle cleanup if needed
+            EN_UNUSED( entityId );
         }
 
       private:
