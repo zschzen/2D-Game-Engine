@@ -214,7 +214,11 @@ namespace en
         virtual void
         Remove( EntityId entityId ) override
         {
-            EN_UNUSED( entityId );
+            if( entityId < m_data.size() )
+                {
+                    // The slot dies with its entity, a default value avoids leaking the old owner's data
+                    m_data[entityId] = T{};
+                }
         }
 
       private:
