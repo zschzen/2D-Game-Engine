@@ -302,20 +302,20 @@ namespace en
 
       private:
         // --- Component Pool Helpers ------------------------------------------
-        // Get the pool for the given component type, or nullptr if it doesn't exist
+        // Get the pool for the given type, or nullptr if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        std::shared_ptr< Pool< TComponent > > GetComponentPool() const;
+        Pool< TComponent > * GetComponentPool() const;
 
-        // Create the pool for the given component type, if it doesn't exist yet
+        // Create the pool for the given type
         template < typename TComponent >
         requires ComponentType< TComponent >
-        std::shared_ptr< Pool< TComponent > > CreateComponentPool();
+        Pool< TComponent > & CreateComponentPool();
 
-        // Get the pool for the given component type, creating it if it doesn't exist
+        // Get the pool for the given type, creating it if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        std::shared_ptr< Pool< TComponent > > GetOrCreateComponentPool();
+        Pool< TComponent > & GetOrCreateComponentPool();
 
         // --- System Helpers --------------------------------------------------
         // Get the unique key of the given system type
@@ -554,10 +554,10 @@ namespace en
         return static_cast< const TSystem & >( system );
     }
 
-    // Get the pool for the given component type, or nullptr if it doesn't exist
+    // Get the pool for the given type, or nullptr if it doesn't exist
     template < typename TComponent >
     requires ComponentType< TComponent >
-    std::shared_ptr< Pool< TComponent > >
+    Pool< TComponent > *
     Registry::GetComponentPool() const
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -567,13 +567,13 @@ namespace en
                 return nullptr;
             }
 
-        return std::static_pointer_cast< Pool< TComponent > >( m_componentPools[componentId] );
+        return static_cast< Pool< TComponent > * >( m_componentPools[componentId].get() );
     }
 
-    // Create the pool for the given component type, if it doesn't exist yet
+    // Create the pool for the given type
     template < typename TComponent >
     requires ComponentType< TComponent >
-    std::shared_ptr< Pool< TComponent > >
+    Pool< TComponent > &
     Registry::CreateComponentPool()
     {
         const auto componentId = Component< TComponent >::GetId();
@@ -592,18 +592,18 @@ namespace en
                 m_componentPools[componentId] = std::make_shared< Pool< TComponent > >();
             }
 
-        return std::static_pointer_cast< Pool< TComponent > >( m_componentPools[componentId] );
+        return static_cast< Pool< TComponent > & >( *m_componentPools[componentId] );
     }
 
-    // Get the pool for the given component type, creating it if it doesn't exist
+    // Get the pool for the given type, creating it if it doesn't exist
     template < typename TComponent >
     requires ComponentType< TComponent >
-    std::shared_ptr< Pool< TComponent > >
+    Pool< TComponent > &
     Registry::GetOrCreateComponentPool()
     {
         if( auto componentPool = GetComponentPool< TComponent >() )
             {
-                return componentPool;
+                return *componentPool;
             }
 
         return CreateComponentPool< TComponent >();
@@ -620,14 +620,14 @@ namespace en
 
         // Ensure component pool
         //----------------------------------------------------------
-        const auto componentPool = GetOrCreateComponentPool< TComponent >();
+        auto & componentPool = GetOrCreateComponentPool< TComponent >();
 
         // Attach component to entity
         //----------------------------------------------------------
         // Instantiate component on the stack
         TComponent newComponent( std::forward< TArgs >( args )... );
 
-        componentPool->Set( entityId, newComponent );             // Add component to the pool
+        componentPool.Set( entityId, newComponent );              // Add component to the pool
 
         m_entityComponentSignatures[entityId].set( componentId ); // Enable component signature of the entity
 
