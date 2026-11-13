@@ -29,10 +29,30 @@ namespace en
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
 
+    // Process the entities queued for addition and removal
     void
     Registry::Update()
     {
-        // TODO: Processar entidades em m_entitiesToBeAdded e m_entitiesToBeKilled aqui
+        // Process entities to be created
+        //----------------------------------------------------------
+        for( const auto & entity : m_entitiesToBeAdded )
+            {
+                AddEntityToSystems( entity );
+            }
+        m_entitiesToBeAdded.clear();
+
+        // Process entities to be killed
+        //----------------------------------------------------------
+        for( const auto & entity : m_entitiesToBeKilled )
+            {
+                RemoveEntityFromSystems( entity );
+
+                if( m_entityComponentSignatures.size() > entity.GetId() )
+                    {
+                        m_entityComponentSignatures[entity.GetId()].reset(); // Dead entity holds no components
+                    }
+            }
+        m_entitiesToBeKilled.clear();
     }
 
     // Signals to create an entity
