@@ -329,6 +329,9 @@ namespace en
         std::set< Entity > m_entitiesToBeAdded {};  // Entities to add on next update
         std::set< Entity > m_entitiesToBeKilled {}; // Entities to remove on next update
 
+        std::vector< EntityId > m_freeIds {};       // Ids of dead entities waiting in line to be reused (FIFO: oldest death first)
+        std::vector< bool > m_entityAlive {};       // One flag per entity id, true while the id belongs to a living entity
+
         // --- Components ------------------------------------------------------
         std::vector< std::shared_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
         std::vector< Signature > m_entityComponentSignatures {};     // Components are enabled per entity
