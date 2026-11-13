@@ -23,7 +23,7 @@
 #include <cstddef>       /* std::size_t */
 #include <cstdint>       /* std::uint32_t */
 #include <limits>        /* std::numeric_limits */
-#include <memory>        /* std::shared_ptr, std::make_shared */
+#include <memory>        /* std::unique_ptr, std::make_unique */
 #include <set>           /* std::set */
 #include <type_traits>   /* std::is_const_v, std::is_pointer_v, std::is_volatile_v */
 #include <typeindex>     /* std::type_index */
@@ -72,7 +72,7 @@ namespace en
                             && !std::is_pointer_v< T >   // Pool owns the component, not the pointee
                             && !std::is_volatile_v< T >; // std::vector cannot hold volatile objects
 
-    // Concept for types the registry can store and retrieve as shared_ptr< System >
+    // Concept for types the registry owns and retrieves as borrowed System & views
     template < typename T >
     concept SystemType = std::derived_from< T, System > // Public, unambiguous inheritance: T* converts to System*
                          && !std::is_const_v< T >       // const T* does not convert to System*
@@ -333,11 +333,11 @@ namespace en
         std::vector< bool > m_entityAlive {};       // One flag per entity id, true while the id belongs to a living entity
 
         // --- Components ------------------------------------------------------
-        std::vector< std::shared_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
+        std::vector< std::unique_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
         std::vector< Signature > m_entityComponentSignatures {};     // Components are enabled per entity
 
         // --- Systems ---------------------------------------------------------
-        std::unordered_map< std::type_index, std::shared_ptr< System > > m_systems {}; // Systems indexed by their type
+        std::unordered_map< std::type_index, std::unique_ptr< System > > m_systems {}; // Systems indexed by their type
     };
 
     //==========================================================================================================
@@ -513,7 +513,7 @@ namespace en
 
         EN_ASSERT( !m_systems.contains( systemKey ) && "System is already registered!" );
 
-        m_systems.try_emplace( systemKey, std::make_shared< TSystem >( std::forward< TArgs >( args )... ) );
+        m_systems.try_emplace( systemKey, std::make_unique< TSystem >( std::forward< TArgs >( args )... ) );
     }
 
     // Remove the system of the given type
@@ -582,14 +582,14 @@ namespace en
         //----------------------------------------------------------
         if( m_componentPools.size() <= componentId )
             {
-                m_componentPools.resize( componentId + 1, {} );
+                m_componentPools.resize( componentId + 1 );
             }
 
         // Initialize pool if it doesn't exist yet
         //----------------------------------------------------------
         if( !m_componentPools[componentId] )
             {
-                m_componentPools[componentId] = std::make_shared< Pool< TComponent > >();
+                m_componentPools[componentId] = std::make_unique< Pool< TComponent > >();
             }
 
         return static_cast< Pool< TComponent > & >( *m_componentPools[componentId] );
