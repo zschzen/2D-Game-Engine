@@ -217,7 +217,7 @@ namespace en
             if( entityId < m_data.size() )
                 {
                     // The slot dies with its entity, a default value avoids leaking the old owner's data
-                    m_data[entityId] = T{};
+                    m_data[entityId] = T {};
                 }
         }
 
@@ -244,6 +244,9 @@ namespace en
         Entity CreateEntity();
         // Signals to remove an entity
         void KillEntity( Entity entity );
+
+        // Returns if the given entity is alive
+        bool IsEntityAlive( Entity entity ) const;
 
         // --- Components ------------------------------------------------------
         // Attach a component to the given entity
@@ -329,8 +332,9 @@ namespace en
         std::set< Entity > m_entitiesToBeAdded {};  // Entities to add on next update
         std::set< Entity > m_entitiesToBeKilled {}; // Entities to remove on next update
 
-        std::vector< EntityId > m_freeIds {};       // Ids of dead entities waiting in line to be reused (FIFO: oldest death first)
-        std::vector< bool > m_entityAlive {};       // One flag per entity id, true while the id belongs to a living entity
+        std::vector< EntityId >
+            m_freeIds {}; // Ids of dead entities waiting in line to be reused (FIFO: oldest death first)
+        std::vector< bool > m_entityAlive {}; // One flag per entity id, true while the id belongs to a living entity
 
         // --- Components ------------------------------------------------------
         std::vector< std::unique_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
@@ -615,12 +619,12 @@ namespace en
     void
     Registry::AddComponent( Entity entity, TArgs &&... args )
     {
-        const auto componentId   = Component< TComponent >::GetId();
-        const auto entityId      = entity.GetId();
+        const auto componentId = Component< TComponent >::GetId();
+        const auto entityId    = entity.GetId();
 
         // Ensure component pool
         //----------------------------------------------------------
-        auto & componentPool = GetOrCreateComponentPool< TComponent >();
+        auto & componentPool   = GetOrCreateComponentPool< TComponent >();
 
         // Attach component to entity
         //----------------------------------------------------------

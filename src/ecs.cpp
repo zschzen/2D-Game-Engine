@@ -103,7 +103,7 @@ namespace en
         const auto entityId = entity.GetId();
 
         // Only living entities can be killed
-        if( entityId >= m_entityAlive.size() || !m_entityAlive[entityId] )
+        if( !IsEntityAlive( entity ) )
             {
                 EN_LOG_WARN( "Kill of entity '{}' ignored, entity is already dead", entityId );
                 return;
@@ -111,6 +111,15 @@ namespace en
 
         m_entitiesToBeKilled.insert( entity );
         EN_LOG_INFO( "Entity '{}' was killed", entity.GetId() );
+    }
+
+    // Returns if the given entity is alive
+    bool
+    Registry::IsEntityAlive( Entity entity ) const
+    {
+        const auto entityId = entity.GetId();
+
+        return ( entityId < m_entityAlive.size() ) && m_entityAlive[entityId];
     }
 
     // Adds the entity to all systems that match its component signature
