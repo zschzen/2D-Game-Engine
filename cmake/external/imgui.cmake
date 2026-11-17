@@ -35,12 +35,22 @@ list(APPEND ENGINE_LIBRARIES_INCLUDE_DIR
 
 # Add ImGui to the project
 add_library(imgui STATIC ${IMGUI_SOURCES})
+
 target_include_directories(imgui PUBLIC
-    "${SDL2_SOURCE_DIR}/include"
     ${imgui_SOURCE_DIR}
     ${imgui_SOURCE_DIR}/backends
-  )
-target_link_libraries(imgui PUBLIC ${SDL2_LIBRARIES})
+)
+
+# EMSDK provides SDL
+if(EMSCRIPTEN)
+    target_compile_options(imgui PRIVATE "SHELL:-s USE_SDL=2")
+    target_link_options(imgui PRIVATE "SHELL:-s USE_SDL=2")
+else()
+    if(DEFINED SDL2_SOURCE_DIR)
+        target_include_directories(imgui PUBLIC "${SDL2_SOURCE_DIR}/include")
+    endif()
+    target_link_libraries(imgui PUBLIC ${SDL2_LIBRARIES})
+endif()
 
 # Package ImGui
 packageProject(

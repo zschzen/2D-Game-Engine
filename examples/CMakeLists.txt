@@ -84,13 +84,22 @@ foreach(main_file IN LISTS example_main_files)
             SUFFIX ".html"
             OUTPUT_NAME "${target_name}"
         )
+    # SDL and its extensions come from the Emscripten ports, both at compile and link time
+    target_compile_options(${target_name} PRIVATE
+      "SHELL:-s USE_SDL=2"
+      "SHELL:-s USE_SDL_IMAGE=2"
+      "SHELL:-s USE_SDL_TTF=2"
+      "SHELL:-s USE_SDL_MIXER=2"
+    )
     target_link_options(${target_name} PRIVATE
       "SHELL:-s WASM=1"
       "SHELL:-s USE_SDL=2"
+      "SHELL:-s USE_SDL_IMAGE=2"
+      "SHELL:-s USE_SDL_TTF=2"
+      "SHELL:-s USE_SDL_MIXER=2"
       "SHELL:-s ALLOW_MEMORY_GROWTH=1"
       "SHELL:-s ASSERTIONS=1"
-      "SHELL:-s ASYNCIFY"
-      #"SHELL:-s EXIT_RUNTIME=1"
+      "SHELL:-s EXIT_RUNTIME=1"
     )
 
   endif()

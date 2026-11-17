@@ -49,6 +49,16 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE ${ENGINE_INCLUDE_DIR}/engine.h
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ${ENGINE_LIBRARIES})
 
+# SDL comes from the Emscripten ports when targeting the web
+if(EMSCRIPTEN)
+  target_compile_options(${PROJECT_NAME} PRIVATE
+    "SHELL:-s USE_SDL=2"
+    "SHELL:-s USE_SDL_IMAGE=2"
+    "SHELL:-s USE_SDL_TTF=2"
+    "SHELL:-s USE_SDL_MIXER=2"
+  )
+endif()
+
 set_target_properties(${PROJECT_NAME} PROPERTIES
   CXX_STANDARD 20
   CXX_STANDARD_REQUIRED YES
