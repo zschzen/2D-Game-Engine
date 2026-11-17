@@ -49,6 +49,9 @@
 #    define EN_UNLIKELY( x ) ( x )
 #endif
 
+// Unused return value warning
+#define EN_NODISCARD                        [[nodiscard]]
+
 // Unused parameter suppression
 #define EN_UNUSED( x )                      (void)( x )
 
