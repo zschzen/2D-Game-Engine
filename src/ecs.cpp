@@ -52,7 +52,12 @@ namespace en
                         m_entityComponentSignatures[entity.GetId()].reset(); // Dead entity holds no components
                     }
 
-                m_entityAlive[entity.GetId()] = false;
+                // The generation dies with its entity, stale handles now mismatch
+                auto & generation = m_entityGenerations[entity.GetId()];
+                if( generation < GENERATION_MASK ) // Saturates at max, a 12 bit generation lasts 4096 deaths per id
+                    {
+                        ++generation;
+                    }
                 m_freeIds.push_back( entity.GetId() ); // The id joins the line to be reborn as a new entity
             }
         m_entitiesToBeKilled.clear();
@@ -69,7 +74,7 @@ namespace en
         if( !m_freeIds.empty() )
             {
                 entityId = m_freeIds.front();
-                m_freeIds.erase( m_freeIds.begin() );
+                m_freeIds.pop_front();
             }
         else
             {
@@ -77,21 +82,20 @@ namespace en
                 entityId = static_cast< EntityId >( m_numEntities++ );
             }
 
-        Entity entity( entityId );
-
         if( m_entityComponentSignatures.size() <= entityId )
             {
                 m_entityComponentSignatures.resize( entityId + 1 );
             }
-        if( m_entityAlive.size() <= entityId )
+        if( m_entityGenerations.size() <= entityId )
             {
-                m_entityAlive.resize( entityId + 1, false );
+                m_entityGenerations.resize( entityId + 1, 0 );
             }
-        m_entityAlive[entityId] = true; // The id now belongs to a living entity
+
+        Entity entity( entityId, m_entityGenerations[entityId] ); // The handle carries the id's current generation
 
         m_entitiesToBeAdded.insert( entity );
 
-        EN_LOG_INFO( "Entity created with id '{}'", entityId );
+        EN_LOG_INFO( "Entity '{}' ( generation '{}' ) created", entityId, entity.GetGeneration() );
 
         return entity;
     }
@@ -110,16 +114,16 @@ namespace en
             }
 
         m_entitiesToBeKilled.insert( entity );
-        EN_LOG_INFO( "Entity '{}' was killed", entity.GetId() );
+        EN_LOG_INFO( "Entity '{}' ( generation '{}' ) was killed", entity.GetId(), entity.GetGeneration() );
     }
 
     // Returns if the given entity is alive
     bool
-    Registry::IsEntityAlive( Entity entity ) const
+    Registry::IsEntityAlive( Entity entity ) const noexcept
     {
         const auto entityId = entity.GetId();
 
-        return ( entityId < m_entityAlive.size() ) && m_entityAlive[entityId];
+        return ( entityId < m_entityGenerations.size() ) && ( entity.GetGeneration() == m_entityGenerations[entityId] );
     }
 
     // Adds the entity to all systems that match its component signature

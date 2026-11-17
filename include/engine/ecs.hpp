@@ -22,9 +22,10 @@
 #include <concepts>      /* std::semiregular, std::derived_from, std::constructible_from */
 #include <cstddef>       /* std::size_t */
 #include <cstdint>       /* std::uint32_t */
-#include <limits>        /* std::numeric_limits */
+#include <deque>         /* std::deque */
 #include <memory>        /* std::unique_ptr, std::make_unique */
 #include <set>           /* std::set */
+#include <span>          /* std::span */
 #include <type_traits>   /* std::is_const_v, std::is_pointer_v, std::is_volatile_v */
 #include <typeindex>     /* std::type_index */
 #include <unordered_map> /* std::unordered_map */
@@ -42,7 +43,12 @@ namespace en
     //==========================================================================================================
 
     // Max number of component types
-    constexpr std::size_t MAX_COMPONENTS = 32;
+    constexpr std::size_t MAX_COMPONENTS    = 32u;
+
+    // Layout of a packed entity value: [ generation:12 | id:20 ]
+    constexpr std::size_t ENTITY_ID_BITS    = 20u;
+    constexpr std::uint32_t ENTITY_ID_MASK  = ( 1u << ENTITY_ID_BITS ) - 1;           // 0xFFFFF
+    constexpr std::uint32_t GENERATION_MASK = ( 1u << ( 32u - ENTITY_ID_BITS ) ) - 1; // 0xFFF
 
     //==========================================================================================================
     // TYPEDEFS
@@ -51,11 +57,14 @@ namespace en
     // Unique identifier of an entity
     typedef std::uint32_t EntityId;
 
+    // Version counter of an entity id
+    typedef std::uint32_t GenerationId;
+
     // Unique identifier of a component type
     typedef std::uint32_t ComponentId;
 
-    // Sentinel that refers to no entity
-    constexpr EntityId INVALID_ENTITY_ID { std::numeric_limits< EntityId >::max() };
+    // Sentinel that refers to no entity, kept inside the packed entity id range
+    constexpr EntityId INVALID_ENTITY_ID { ENTITY_ID_MASK };
 
     // Bitmask of component types, one bit per type
     typedef std::bitset< MAX_COMPONENTS > Signature;
@@ -100,7 +109,7 @@ namespace en
     {
       public:
         // Get the unique id of Component<T>, assigned on first use
-        static ComponentId GetId();
+        EN_NODISCARD static ComponentId GetId() noexcept;
     };
 
     //--- ENTITY -----------------------------------------------------------------------------------------------
@@ -109,32 +118,50 @@ namespace en
     class EN_API Entity
     {
       public:
+        // --- Construction ----------------------------------------------------
         // Create an entity
-        Entity( EntityId id )
-            : m_id( id )
+        explicit constexpr Entity( EntityId id, GenerationId generation = 0 )
+            : m_data( Pack( id, generation ) )
         {
+            EN_ASSERT( id <= INVALID_ENTITY_ID && generation <= GENERATION_MASK && "Entity value overflow!" );
         }
 
+        // --- Getters ----------------------------------------------------------
         // Get the entity identifier
-        EN_FORCEINLINE EntityId GetId() const;
+        EN_NODISCARD constexpr EntityId GetId() const noexcept;
 
+        // Get the entity generation
+        EN_NODISCARD constexpr GenerationId GetGeneration() const noexcept;
+
+        // --- Operators --------------------------------------------------------
         // Operator overloading for entity objects
         Entity & operator=( const Entity & other ) = default;
 
         // Check if two entities are equal
-        EN_FORCEINLINE bool operator==( const Entity & other ) const;
+        EN_NODISCARD constexpr bool operator==( const Entity & other ) const noexcept;
 
         // Check if two entities are not equal
-        EN_FORCEINLINE bool operator!=( const Entity & other ) const;
+        EN_NODISCARD constexpr bool operator!=( const Entity & other ) const noexcept;
 
         // Check if this entity compares greater than another
-        EN_FORCEINLINE bool operator>( const Entity & other ) const;
+        EN_NODISCARD constexpr bool operator>( const Entity & other ) const noexcept;
 
         // Check if this entity compares less than another
-        EN_FORCEINLINE bool operator<( const Entity & other ) const;
+        EN_NODISCARD constexpr bool operator<( const Entity & other ) const noexcept;
 
       private:
-        EntityId m_id { INVALID_ENTITY_ID }; // Entity identifier
+        // --- Packing ----------------------------------------------------------
+        // Pack the id and the generation into a single entity value
+        EN_NODISCARD static constexpr std::uint32_t Pack( EntityId id, GenerationId generation ) noexcept;
+
+        // Extract the id from a packed entity value
+        EN_NODISCARD static constexpr EntityId UnpackId( std::uint32_t data ) noexcept;
+
+        // Extract the generation from a packed entity value
+        EN_NODISCARD static constexpr GenerationId UnpackGeneration( std::uint32_t data ) noexcept;
+
+        // --- Data -------------------------------------------------------------
+        std::uint32_t m_data { Pack( INVALID_ENTITY_ID, 0 ) }; // Packed [ generation | id ] entity value
     };
 
     //--- SYSTEM -----------------------------------------------------------------------------------------------
@@ -152,14 +179,14 @@ namespace en
         // Remove the entity from the system
         void RemoveEntityFromSystem( Entity entity );
 
-        // Get the entities handled by the system
-        EN_FORCEINLINE const std::vector< Entity > & GetSystemEntities() const;
+        // Get the entities handled by the system, read-only borrowed view
+        EN_NODISCARD EN_FORCEINLINE std::span< const Entity > GetSystemEntities() const noexcept;
 
         // Defines the component type that entities must have to be considered by the system
-        template < ComponentType TComponent > void RequireComponent();
+        template < ComponentType TComponent > void RequireComponent() noexcept;
 
         // Get the component types an entity needs to be handled by the system
-        EN_FORCEINLINE const Signature & GetComponentSignature() const;
+        EN_NODISCARD EN_FORCEINLINE const Signature & GetComponentSignature() const noexcept;
 
       private:
         Signature m_componentSignature {};   // Component types an entity needs to be handled by the system
@@ -182,7 +209,6 @@ namespace en
       public:
         Pool( std::size_t capacity = 100u )
             : m_data( capacity )
-            , m_size( 0u )
         {
         }
 
@@ -190,9 +216,9 @@ namespace en
 
         // --- Capacity --------------------------------------------------------
         // Check if the pool holds no objects
-        EN_FORCEINLINE bool IsEmpty() const;
+        EN_NODISCARD EN_FORCEINLINE bool IsEmpty() const noexcept;
         // Get the number of objects stored in the pool
-        EN_FORCEINLINE std::size_t GetSize() const;
+        EN_NODISCARD EN_FORCEINLINE std::size_t GetSize() const noexcept;
 
         // --- Modifiers -------------------------------------------------------
         // Resize the pool to hold the given number of objects
@@ -206,24 +232,19 @@ namespace en
 
         // --- Element Access --------------------------------------------------
         // Get the object at the given index
-        EN_FORCEINLINE T & Get( std::size_t index );
+        EN_NODISCARD EN_FORCEINLINE T & Get( std::size_t index ) noexcept;
         // Get the object at the given index
-        EN_FORCEINLINE T & operator[]( std::size_t index );
+        EN_NODISCARD EN_FORCEINLINE const T & Get( std::size_t index ) const noexcept;
+        // Get the object at the given index
+        EN_NODISCARD EN_FORCEINLINE T & operator[]( std::size_t index ) noexcept;
+        // Get the object at the given index
+        EN_NODISCARD EN_FORCEINLINE const T & operator[]( std::size_t index ) const noexcept;
 
         // Implementation for IPool interface method
-        virtual void
-        Remove( EntityId entityId ) override
-        {
-            if( entityId < m_data.size() )
-                {
-                    // The slot dies with its entity, a default value avoids leaking the old owner's data
-                    m_data[entityId] = T {};
-                }
-        }
+        virtual void Remove( EntityId entityId ) override;
 
       private:
         std::vector< T > m_data {}; // Objects stored in the pool, indexed by entity id
-        std::size_t m_size { 0 };   // Number of objects currently stored in the pool
     };
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
@@ -246,7 +267,7 @@ namespace en
         void KillEntity( Entity entity );
 
         // Returns if the given entity is alive
-        bool IsEntityAlive( Entity entity ) const;
+        EN_NODISCARD bool IsEntityAlive( Entity entity ) const noexcept;
 
         // --- Components ------------------------------------------------------
         // Attach a component to the given entity
@@ -262,12 +283,12 @@ namespace en
         // Returns if the given entity has the component
         template < typename TComponent >
         requires ComponentType< TComponent >
-        bool HasComponent( Entity entity ) const;
+        EN_NODISCARD bool HasComponent( Entity entity ) const noexcept;
 
         // Returns the requested component from the given entity
         template < typename TComponent >
         requires ComponentType< TComponent >
-        TComponent & GetComponent( Entity entity ) const;
+        EN_NODISCARD TComponent & GetComponent( Entity entity ) const;
 
         // --- Systems ---------------------------------------------------------
         // Add a system of the given type, constructing it with the given arguments
@@ -283,19 +304,17 @@ namespace en
         // Returns if the given system type is registered
         template < typename TSystem >
         requires SystemType< TSystem >
-        bool HasSystem() const;
+        EN_NODISCARD bool HasSystem() const;
 
         // Returns the requested system from the registry
-        // Throws std::out_of_range if it is not registered
         template < typename TSystem >
         requires SystemType< TSystem >
-        TSystem & GetSystem();
+        EN_NODISCARD TSystem & GetSystem();
 
         // Returns the requested system from the registry, read-only
-        // Throws std::out_of_range if it is not registered
         template < typename TSystem >
         requires SystemType< TSystem >
-        const TSystem & GetSystem() const;
+        EN_NODISCARD const TSystem & GetSystem() const;
 
         // Adds the entity to all systems that match its component signature
         void AddEntityToSystems( Entity entity );
@@ -308,7 +327,7 @@ namespace en
         // Get the pool for the given type, or nullptr if it doesn't exist
         template < typename TComponent >
         requires ComponentType< TComponent >
-        Pool< TComponent > * GetComponentPool() const;
+        EN_NODISCARD Pool< TComponent > * GetComponentPool() const noexcept;
 
         // Create the pool for the given type
         template < typename TComponent >
@@ -324,17 +343,16 @@ namespace en
         // Get the unique key of the given system type
         template < typename TSystem >
         requires SystemType< TSystem >
-        EN_FORCEINLINE static std::type_index SystemKey();
+        EN_NODISCARD EN_FORCEINLINE static std::type_index SystemKey() noexcept;
 
         // --- Entities --------------------------------------------------------
-        std::size_t m_numEntities { 0 };            // Total amount of entities was added to the scene
+        std::size_t m_numEntities { 0 };                    // Total amount of entities was added to the scene
 
-        std::set< Entity > m_entitiesToBeAdded {};  // Entities to add on next update
-        std::set< Entity > m_entitiesToBeKilled {}; // Entities to remove on next update
+        std::set< Entity > m_entitiesToBeAdded {};          // Entities to add on next update
+        std::set< Entity > m_entitiesToBeKilled {};         // Entities to remove on next update
 
-        std::vector< EntityId >
-            m_freeIds {}; // Ids of dead entities waiting in line to be reused (FIFO: oldest death first)
-        std::vector< bool > m_entityAlive {}; // One flag per entity id, true while the id belongs to a living entity
+        std::deque< EntityId > m_freeIds {};                // Ids of dead entities waiting in line to be reused
+        std::vector< GenerationId > m_entityGenerations {}; // Current generation per entity id
 
         // --- Components ------------------------------------------------------
         std::vector< std::unique_ptr< IPool > > m_componentPools {}; // Pools indexed by component type id
@@ -353,47 +371,83 @@ namespace en
     // Get the unique id of Component<T>, assigned on first use
     template < ComponentType T >
     ComponentId
-    Component< T >::GetId()
+    Component< T >::GetId() noexcept
     {
-        static const ComponentId id = nextId++;
+        static const ComponentId id = []
+            {
+                // The signature bitset can only address the first MAX_COMPONENTS types
+                EN_ASSERT( nextId < MAX_COMPONENTS && "Too many component types registered!" );
+
+                return nextId++;
+            }();
+
         return id;
     }
 
     //--- ENTITY -----------------------------------------------------------------------------------------------
 
     // Get the entity identifier
-    EN_FORCEINLINE EntityId
-    Entity::GetId() const
+    constexpr EntityId
+    Entity::GetId() const noexcept
     {
-        return m_id;
+        return UnpackId( m_data );
+    }
+
+    // Get the entity generation
+    constexpr GenerationId
+    Entity::GetGeneration() const noexcept
+    {
+        return UnpackGeneration( m_data );
     }
 
     // Check if two entities are equal
-    EN_FORCEINLINE bool
-    Entity::operator==( const Entity & other ) const
+    constexpr bool
+    Entity::operator==( const Entity & other ) const noexcept
     {
-        return m_id == other.m_id;
+        return m_data == other.m_data;
     }
 
     // Check if two entities are not equal
-    EN_FORCEINLINE bool
-    Entity::operator!=( const Entity & other ) const
+    constexpr bool
+    Entity::operator!=( const Entity & other ) const noexcept
     {
-        return m_id != other.m_id;
+        return m_data != other.m_data;
     }
 
     // Check if this entity compares greater than another
-    EN_FORCEINLINE bool
-    Entity::operator>( const Entity & other ) const
+    constexpr bool
+    Entity::operator>( const Entity & other ) const noexcept
     {
-        return m_id > other.m_id;
+        return m_data > other.m_data;
     }
 
     // Check if this entity compares less than another
-    EN_FORCEINLINE bool
-    Entity::operator<( const Entity & other ) const
+    constexpr bool
+    Entity::operator<( const Entity & other ) const noexcept
     {
-        return m_id < other.m_id;
+        return m_data < other.m_data;
+    }
+
+    // Pack the id and the generation into a single entity value
+    constexpr std::uint32_t
+    Entity::Pack( EntityId id, GenerationId generation ) noexcept
+    {
+        // High 12 bits for generation, low 20 bits for id
+        return ( ( generation & GENERATION_MASK ) << ENTITY_ID_BITS ) | ( id & ENTITY_ID_MASK );
+    }
+
+    // Extract the id from a packed entity value
+    constexpr EntityId
+    Entity::UnpackId( std::uint32_t data ) noexcept
+    {
+        return static_cast< EntityId >( data & ENTITY_ID_MASK );
+    }
+
+    // Extract the generation from a packed entity value
+    constexpr GenerationId
+    Entity::UnpackGeneration( std::uint32_t data ) noexcept
+    {
+        return static_cast< GenerationId >( ( data >> ENTITY_ID_BITS ) & GENERATION_MASK );
     }
 
     //--- SYSTEM -----------------------------------------------------------------------------------------------
@@ -401,16 +455,16 @@ namespace en
     // Set the component type bit in the system signature
     template < ComponentType TComponent >
     void
-    System::RequireComponent()
+    System::RequireComponent() noexcept
     {
         const std::size_t componentId = static_cast< std::size_t >( Component< TComponent >::GetId() );
         m_componentSignature.set( componentId );
     }
 
-    // Get the entities handled by the system
+    // Get the entities handled by the system, read-only borrowed view
     EN_FORCEINLINE
-    const std::vector< Entity > &
-    System::GetSystemEntities() const
+    std::span< const Entity >
+    System::GetSystemEntities() const noexcept
     {
         return m_entities;
     }
@@ -418,7 +472,7 @@ namespace en
     // Get the component types an entity needs to be handled by the system
     EN_FORCEINLINE
     const Signature &
-    System::GetComponentSignature() const
+    System::GetComponentSignature() const noexcept
     {
         return m_componentSignature;
     }
@@ -428,7 +482,7 @@ namespace en
     // Check if the pool holds no objects
     template < ComponentType T >
     EN_FORCEINLINE bool
-    Pool< T >::IsEmpty() const
+    Pool< T >::IsEmpty() const noexcept
     {
         return m_data.empty();
     }
@@ -436,7 +490,7 @@ namespace en
     // Get the number of objects stored in the pool
     template < ComponentType T >
     EN_FORCEINLINE std::size_t
-    Pool< T >::GetSize() const
+    Pool< T >::GetSize() const noexcept
     {
         return m_data.size();
     }
@@ -470,30 +524,57 @@ namespace en
     void
     Pool< T >::Set( std::size_t index, T object )
     {
-        if( index >= m_data.size() )
+        if( EN_UNLIKELY( index >= m_data.size() ) )
             {
                 // Ensure the pool can hold the given index
                 m_data.resize( index + 1 );
             }
 
         m_data[index] = object;
-        ++m_size;
     }
 
     // Get the object at the given index
     template < ComponentType T >
     EN_FORCEINLINE T &
-    Pool< T >::Get( std::size_t index )
-    {
-        return static_cast< T & >( m_data[index] );
-    }
-
-    // Get the object at the given index
-    template < ComponentType T >
-    EN_FORCEINLINE T &
-    Pool< T >::operator[]( std::size_t index )
+    Pool< T >::Get( std::size_t index ) noexcept
     {
         return m_data[index];
+    }
+
+    // Get the object at the given index
+    template < ComponentType T >
+    EN_FORCEINLINE const T &
+    Pool< T >::Get( std::size_t index ) const noexcept
+    {
+        return m_data[index];
+    }
+
+    // Get the object at the given index
+    template < ComponentType T >
+    EN_FORCEINLINE T &
+    Pool< T >::operator[]( std::size_t index ) noexcept
+    {
+        return m_data[index];
+    }
+
+    // Get the object at the given index
+    template < ComponentType T >
+    EN_FORCEINLINE const T &
+    Pool< T >::operator[]( std::size_t index ) const noexcept
+    {
+        return m_data[index];
+    }
+
+    // Implementation for IPool interface method
+    template < ComponentType T >
+    void
+    Pool< T >::Remove( EntityId entityId )
+    {
+        if( EN_LIKELY( entityId < m_data.size() ) )
+            {
+                // The slot dies with its entity, a default value avoids leaking the old owner's data
+                m_data[entityId] = T {};
+            }
     }
 
     //--- REGISTRY ---------------------------------------------------------------------------------------------
@@ -502,7 +583,7 @@ namespace en
     template < typename TSystem >
     requires SystemType< TSystem >
     EN_FORCEINLINE std::type_index
-    Registry::SystemKey()
+    Registry::SystemKey() noexcept
     {
         return std::type_index( typeid( TSystem ) );
     }
@@ -562,11 +643,11 @@ namespace en
     template < typename TComponent >
     requires ComponentType< TComponent >
     Pool< TComponent > *
-    Registry::GetComponentPool() const
+    Registry::GetComponentPool() const noexcept
     {
         const auto componentId = Component< TComponent >::GetId();
 
-        if( componentId >= m_componentPools.size() )
+        if( EN_UNLIKELY( componentId >= m_componentPools.size() ) )
             {
                 return nullptr;
             }
@@ -584,14 +665,14 @@ namespace en
 
         // Ensure component pools vector has enough capacity
         //----------------------------------------------------------
-        if( m_componentPools.size() <= componentId )
+        if( EN_UNLIKELY( m_componentPools.size() <= componentId ) )
             {
                 m_componentPools.resize( componentId + 1 );
             }
 
         // Initialize pool if it doesn't exist yet
         //----------------------------------------------------------
-        if( !m_componentPools[componentId] )
+        if( EN_UNLIKELY( !m_componentPools[componentId] ) )
             {
                 m_componentPools[componentId] = std::make_unique< Pool< TComponent > >();
             }
@@ -619,6 +700,9 @@ namespace en
     void
     Registry::AddComponent( Entity entity, TArgs &&... args )
     {
+        // Components can only be attached to living entities
+        EN_ASSERT( IsEntityAlive( entity ) && "Entity is not alive!" );
+
         const auto componentId = Component< TComponent >::GetId();
         const auto entityId    = entity.GetId();
 
@@ -649,7 +733,8 @@ namespace en
 
         if( auto componentPool = GetComponentPool< TComponent >() )
             {
-                // TODO: componentPool->RemoveEntityFromPool( entityId );
+                // The slot dies with the component, no stale data lingers in the pool
+                componentPool->Remove( entityId );
             }
 
         if( entityId < m_entityComponentSignatures.size() )
@@ -664,7 +749,7 @@ namespace en
     template < typename TComponent >
     requires ComponentType< TComponent >
     bool
-    Registry::HasComponent( Entity entity ) const
+    Registry::HasComponent( Entity entity ) const noexcept
     {
         const auto componentId = Component< TComponent >::GetId();
         const auto entityId    = entity.GetId();
@@ -681,6 +766,7 @@ namespace en
     {
         auto componentPool = GetComponentPool< TComponent >();
         EN_ASSERT( componentPool && "Entity does not have this component pool!" );
+        EN_ASSERT( entity.GetId() < componentPool->GetSize() && "Entity id is out of the pool bounds!" );
 
         return componentPool->Get( entity.GetId() );
     }
