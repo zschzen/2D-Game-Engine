@@ -9,20 +9,20 @@
  ********************************************************************************************/
 
 #include "engine/ecs.hpp"
+#include "example.hpp"
 
-#include <cstdlib>
 #include <vector>
 
 // Components
 // Data structs attached to entities, they hold no logic
 //----------------------------------------------------------
-struct Transform
+struct TransformComponent
 {
     double x { 0.0 }; // Horizontal position
     double y { 0.0 }; // Vertical position
 };
 
-struct RigidBody
+struct RigidBodyComponent
 {
     double vx { 0.0 }; // Horizontal velocity
     double vy { 0.0 }; // Vertical velocity
@@ -37,8 +37,8 @@ class MovementSystem : public en::System
     MovementSystem()
     {
         // Entities handled by this system must hold these components
-        RequireComponent< Transform >();
-        RequireComponent< RigidBody >();
+        RequireComponent< TransformComponent >();
+        RequireComponent< RigidBodyComponent >();
     }
 
     void
@@ -46,8 +46,8 @@ class MovementSystem : public en::System
     {
         for( const en::Entity & entity : GetSystemEntities() )
             {
-                auto & transform       = registry.GetComponent< Transform >( entity );
-                const auto & rigidBody = registry.GetComponent< RigidBody >( entity );
+                auto & transform       = registry.GetComponent< TransformComponent >( entity );
+                const auto & rigidBody = registry.GetComponent< RigidBodyComponent >( entity );
 
                 // Integrate velocity into position
                 transform.x += rigidBody.vx * deltaTime;
@@ -58,55 +58,92 @@ class MovementSystem : public en::System
     }
 };
 
-int
-main( int argc, char * argv[] )
+// Example
+// Windowed simulation that spawns moving entities and kills one of them mid run
+//----------------------------------------------------------
+class EcsExample : public ExampleApp
 {
-    EN_UNUSED( argc );
-    EN_UNUSED( argv );
+  public:
+    EcsExample()
+        : ExampleApp( "2D Game Engine example - ecs" )
+    {
+    }
 
-    // Registry and System Creation
-    //----------------------------------------------------------
+  protected:
+    void
+    OnStart() override
+    {
+        // Entity Creation
+        //----------------------------------------------------------
+        // Each entity holds a TransformComponent and a RigidBodyComponent to be moved by the MovementSystem
+        constexpr int numEntities = 3;
+        for( int i = 0; i < numEntities; ++i )
+            {
+                en::Entity entity = registry.CreateEntity();
+                entities.push_back( entity );
+
+                const double offsetX = 10.0 * static_cast< double >( i );
+                registry.AddComponent< TransformComponent >( entity, offsetX, 0.0 );
+                registry.AddComponent< RigidBodyComponent >( entity, 30.0 + offsetX, 15.0 - offsetX );
+
+                // Entities are added to systems explicitly
+                movementSystem.AddEntityToSystem( entity );
+
+                EN_LOG_INFO( "Entity id '{}' ( {} )", entity.GetId(),
+                             registry.HasComponent< TransformComponent >( entity ) );
+            }
+    }
+
+    void
+    OnUpdate( double deltaTime ) override
+    {
+        // Simulation Loop
+        //----------------------------------------------------------
+        movementSystem.Update( deltaTime, registry );
+
+        // Entity Killing / Lifecycle
+        //----------------------------------------------------------
+        constexpr int numFrames = 5;
+        if( ++frame == numFrames )
+            {
+                registry.KillEntity( entities[1] );
+                registry.Update();
+
+                EN_LOG_INFO( "Simulation finished" );
+            }
+    }
+
+    void
+    OnRender( SDL_Renderer & renderer ) override
+    {
+        // Entity Rendering
+        //----------------------------------------------------------
+        // Draw a rectangle at the position of every living entity
+        constexpr float entitySize = 32.0f;
+        SDL_SetRenderDrawColor( &renderer, 200, 200, 200, 255 );
+        for( const en::Entity & entity : movementSystem.GetSystemEntities() )
+            {
+                if( !registry.IsEntityAlive( entity ) ) continue;
+
+                const auto & transform = registry.GetComponent< TransformComponent >( entity );
+
+                const SDL_FRect rect { static_cast< float >( transform.x ), static_cast< float >( transform.y ),
+                                       entitySize, entitySize };
+                SDL_RenderFillRectF( &renderer, &rect );
+            }
+    }
+
+  private:
     en::Registry registry {};
     MovementSystem movementSystem {};
-
-    // Entity Creation
-    //----------------------------------------------------------
-    // Each entity holds a Transform and a RigidBody to be moved by the MovementSystem
     std::vector< en::Entity > entities {};
+    int frame {};
+};
 
-    constexpr int numEntities = 3;
-    for( int i = 0; i < numEntities; ++i )
-        {
-            en::Entity entity = registry.CreateEntity();
-            entities.push_back( entity );
-
-            const double offsetX = 10.0 * static_cast< double >( i );
-            registry.AddComponent< Transform >( entity, offsetX, 0.0 );
-            registry.AddComponent< RigidBody >( entity, 30.0 + offsetX, 15.0 - offsetX );
-
-            // Entities are added to systems explicitly
-            movementSystem.AddEntityToSystem( entity );
-
-            EN_LOG_INFO( "Entity id '{}' ( {} )", entity.GetId(), registry.HasComponent< Transform >( entity ) );
-        }
-
-    // Simulation Loop
-    //----------------------------------------------------------
-    constexpr double deltaTime = 1.0 / 60.0;
-    constexpr int numFrames    = 5;
-
-    for( int frame = 0; frame < numFrames; ++frame )
-        {
-            EN_LOG_INFO( "Frame '{}'", frame );
-            movementSystem.Update( deltaTime, registry );
-        }
-
-    // Entity Killing / Lifecycle
-    //----------------------------------------------------------
-    registry.KillEntity( entities[1] );
-    registry.Update();
-
-    EN_LOG_INFO( "Simulation finished" );
-
-    return EXIT_SUCCESS;
+// Instantiated by examples/main.cpp
+//----------------------------------------------------------
+std::unique_ptr< ExampleApp >
+CreateExample()
+{
+    return std::make_unique< EcsExample >();
 }

@@ -54,6 +54,9 @@ foreach(main_file IN LISTS example_main_files)
   # Create executable
   add_executable(${target_name} ${example_sources})
 
+  # Shared entry point and boilerplate
+  target_sources(${target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+
   # Set target properties
   set_target_properties(${target_name} PROPERTIES
         CXX_STANDARD 20
@@ -66,7 +69,7 @@ foreach(main_file IN LISTS example_main_files)
   # Include directories
   target_include_directories(${target_name} PRIVATE
         ${example_abs_path}
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
   # Link dependencies
